@@ -1,0 +1,30 @@
+{
+  "project_info": {
+    "project_number": "467524957990",
+    "firebase_url": "https://kotlin-mobile-application-default-rtdb.firebaseio.com",
+    "project_id": "kotlin-mobile-application",
+    "storage_bucket": "kotlin-mobile-application.firebasestorage.app"
+  },
+  "client": [
+    {
+      "client_info": {
+        "mobilesdk_app_id": "1:467524957990:android:212fa6363184b95e1073e7",
+        "android_client_info": {
+          "package_name": "com.example.petadoptionmanagement"
+        }
+      },
+      "oauth_client": [],
+      "api_key": [
+        {
+          "current_key": "AIzaSyAQySXv5YANiVmLH5dYd1bFoM41BFgilBU"
+        }
+      ],
+      "services": {
+        "appinvite_service": {
+          "other_platform_oauth_client": []
+        }
+      }
+    }
+  ],
+  "configuration_version": "1"
+}

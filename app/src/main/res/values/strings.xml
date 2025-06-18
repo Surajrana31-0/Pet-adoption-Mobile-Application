@@ -1,4 +1,8 @@
 <resources>
     <string name="app_name">Pet Adoption Management</string>
     <string name="title_activity_home_page">HomePage</string>
+    <string name="title_activity_sign_up">SignUpActivity</string>
+    <string name="title_activity_sign_in">SignInActivity</string>
+    <string name="title_activity_reset_password">ResetPasswordActivity</string>
+    <string name="title_activity_splash">SplashActivity</string>
 </resources>
