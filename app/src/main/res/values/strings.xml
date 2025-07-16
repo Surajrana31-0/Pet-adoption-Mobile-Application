@@ -5,4 +5,11 @@
     <string name="title_activity_sign_in">SignInActivity</string>
     <string name="title_activity_reset_password">ResetPasswordActivity</string>
     <string name="title_activity_splash">SplashActivity</string>
+    <string name="title_activity_pet_view">PetViewActivity</string>
+    <string name="title_activity_contact">ContactActivity</string>
+    <string name="title_activity_dashboard">DashboardActivity</string>
+    <string name="title_activity_adoption">AdoptionActivity</string>
+    <string name="title_activity_consult">ConsultActivity</string>
+    <string name="title_activity_purchase">PurchaseActivity</string>
+    <string name="title_activity_about">AboutActivity</string>
 </resources>
