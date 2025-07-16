@@ -22,16 +22,22 @@ import androidx.compose.ui.text.style.TextAlign
 import androidx.compose.ui.tooling.preview.Preview
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
-import com.example.petadoptionmanagement.R
-import com.example.petadoptionmanagement.ui.theme.PetAdoptionManagementTheme
 import androidx.navigation.NavController
 import androidx.navigation.compose.rememberNavController
+import com.example.petadoptionmanagement.R
+import com.example.petadoptionmanagement.ui.theme.PetAdoptionManagementTheme
 import androidx.compose.foundation.lazy.LazyRow
 import androidx.compose.foundation.lazy.items
+import androidx.compose.ui.draw.clip
 import androidx.compose.ui.layout.ContentScale
 import androidx.compose.ui.text.SpanStyle
 import androidx.compose.ui.text.buildAnnotatedString
 import androidx.compose.ui.text.withStyle
+
+// New imports for Icons
+import androidx.compose.material.icons.Icons
+import androidx.compose.material.icons.filled.Menu
+
 
 // --- Data Classes for Demo Data ---
 data class Pet(val id: Int, val name: String, val breed: String, val age: String, val imageRes: Int)
@@ -49,7 +55,7 @@ class HomePage : ComponentActivity() {
                 // This HomePage Activity will typically be launched by the NavController.
                 // For direct launch for testing HomePageScaffold, you'd create NavController here:
                 // val navController = rememberNavController()
-                // HomePageScaffold(navController = navController)
+                // HomePageScreen(navController = navController)
             }
         }
     }
@@ -58,7 +64,7 @@ class HomePage : ComponentActivity() {
 // --- Main Composable for the HomePage Screen ---
 @OptIn(ExperimentalMaterial3Api::class) // For TopAppBar
 @Composable
-fun HomePageScreen(navController: NavController) { // Renamed from HomePageScaffold to reflect it's a full screen
+fun HomePageScreen(navController: NavController ) { // Renamed from HomePageScaffold to reflect it's a full screen
     Scaffold(
         topBar = { HomeHeader(navController = navController) },
         bottomBar = { HomeFooter(navController = navController) },
@@ -74,37 +80,52 @@ fun HomePageScreen(navController: NavController) { // Renamed from HomePageScaff
 fun HomeHeader(navController: NavController) {
     TopAppBar(
         title = {
-            Row(verticalAlignment = Alignment.CenterVertically) {
-                // You can add a small logo here if you have one
-                // Image(painter = painterResource(id = R.drawable.app_logo), contentDescription = "App Logo", modifier = Modifier.size(32.dp))
-                // Spacer(modifier = Modifier.width(8.dp))
-                Text(
-                    "Pet Adoption",
-                    fontWeight = FontWeight.ExtraBold, // Made it bolder
-                    fontSize = 24.sp,
-                    color = Color(0xFF22223B) // Dark text
-                )
-            }
+            // "PetEy" text will be centered within the title area
+            Text(
+                "PetEy",
+                fontWeight = FontWeight.ExtraBold,
+                fontSize = 24.sp,
+                color = Color(0xFF22223B),
+                modifier = Modifier.fillMaxWidth().wrapContentWidth(Alignment.Start)
+            )
         },
         actions = {
-            // Navigation options
-            TextButton(onClick = { navController.navigate("home") }) {
-                Text("Home", color = Color(0xFF4A4E69), fontWeight = FontWeight.Bold, fontSize = 16.sp)
-            }
-            TextButton(onClick = { navController.navigate("about") }) {
-                Text("About", color = Color(0xFF4A4E69), fontWeight = FontWeight.Medium, fontSize = 16.sp)
-            }
-            TextButton(onClick = { navController.navigate("contact") }) {
-                Text("Contact", color = Color(0xFF4A4E69), fontWeight = FontWeight.Medium, fontSize = 16.sp)
-            }
-            // Adopt button redirects to Login/Registration
-            Button(
-                onClick = { navController.navigate("login") }, // Navigate to login route
-                colors = ButtonDefaults.buttonColors(containerColor = Color(0xFF8B4513)), // Earthy brown button
-                shape = RoundedCornerShape(8.dp),
-                contentPadding = PaddingValues(horizontal = 12.dp, vertical = 6.dp) // Adjust padding
+            Row(
+                verticalAlignment = Alignment.CenterVertically,
+                horizontalArrangement = Arrangement.spacedBy(8.dp) // Spacing between buttons and icon
             ) {
-                Text("Adopt", color = Color.White, fontWeight = FontWeight.SemiBold, fontSize = 16.sp)
+                // Login Button
+                Button(
+                    onClick = { navController.navigate("login") }, // Navigate to login route
+                    colors = ButtonDefaults.buttonColors(containerColor = Color(0xFF8B4513)), // Earthy brown button
+                    shape = RoundedCornerShape(8.dp),
+                    contentPadding = PaddingValues(horizontal = 12.dp, vertical = 6.dp)
+                ) {
+                    Text("Login", color = Color.White, fontWeight = FontWeight.SemiBold, fontSize = 16.sp)
+                }
+
+                // Sign Up Button
+                Button(
+                    onClick = { navController.navigate("signup") }, // Assuming you have a "signup" route
+                    colors = ButtonDefaults.buttonColors(containerColor = Color(0xFF4CAF50)), // A different color for signup
+                    shape = RoundedCornerShape(8.dp),
+                    contentPadding = PaddingValues(horizontal = 12.dp, vertical = 6.dp)
+                ) {
+                    Text("Sign Up", color = Color.White, fontWeight = FontWeight.SemiBold, fontSize = 16.sp)
+                }
+
+                // Hamburger Menu Icon
+                IconButton(onClick = {
+                    // This is where you would typically open a Navigation Drawer
+                    // For preview, or simple navigation, you could navigate to a "Home" route or show a toast.
+                    navController.navigate("home") // Example: Navigate home, or show a temporary menu
+                }) {
+                    Icon(
+                        imageVector = Icons.Default.Menu,
+                        contentDescription = "Menu",
+                        tint = Color(0xFF22223B) // Dark color for the icon
+                    )
+                }
             }
         },
         colors = TopAppBarDefaults.topAppBarColors(containerColor = Color.White, titleContentColor = Color.Black)
@@ -127,16 +148,16 @@ fun HomeFooter(navController: NavController) {
         ) {
             // Contact Info
             Text(
-                text = "Contact Us: info@petadoption.com | +123 456 7890",
+                text = "Contact Us: info@petadoption.com | +91 9806400001",
                 color = Color(0xFF4A4E69),
                 fontSize = 14.sp,
                 textAlign = TextAlign.Center
             )
             // Social Media Icons (placeholders for now)
             Row(horizontalArrangement = Arrangement.spacedBy(20.dp)) {
-                Image(painter = painterResource(id = R.drawable.ic_facebook), contentDescription = "Facebook", modifier = Modifier.size(28.dp).clickable { /* TODO: Open Facebook */ })
-                Image(painter = painterResource(id = R.drawable.ic_twitter), contentDescription = "Twitter", modifier = Modifier.size(28.dp).clickable { /* TODO: Open Twitter */ })
-                Image(painter = painterResource(id = R.drawable.ic_instagram), contentDescription = "Instagram", modifier = Modifier.size(28.dp).clickable { /* TODO: Open Instagram */ })
+                Image(painter = painterResource(id = R.drawable.facebook), contentDescription = "Facebook", modifier = Modifier.size(28.dp).clickable { /* TODO: Open Facebook */ })
+                Image(painter = painterResource(id = R.drawable.twitter), contentDescription = "Twitter", modifier = Modifier.size(28.dp).clickable { /* TODO: Open Twitter */ })
+                Image(painter = painterResource(id = R.drawable.instagram), contentDescription = "Instagram", modifier = Modifier.size(28.dp).clickable { /* TODO: Open Instagram */ })
             }
             // Copyright Note
             Text(
@@ -189,7 +210,7 @@ fun HeroBannerSection(navController: NavController) {
         ) {
             // Background Image
             Image(
-                painter = painterResource(id = R.drawable.hero_banner), // Your banner image
+                painter = painterResource(id = R.drawable.hero_pet), // Your banner image
                 contentDescription = "Happy adopted pets banner",
                 contentScale = ContentScale.Crop,
                 modifier = Modifier.fillMaxSize()
@@ -226,10 +247,10 @@ fun HeroBannerSection(navController: NavController) {
                     colors = ButtonDefaults.buttonColors(
                         containerColor = Color(0xFF8B4513) // Earthy brown for CTA
                     ),
-                    shape = RoundedCornerShape(16.dp),
+                    shape = RoundedCornerShape(16.dp), // Slightly more rounded
                     modifier = Modifier
                         .height(56.dp) // Taller button
-                        .fillMaxWidth(0.6f) // Wider button
+                        .fillMaxWidth(0.7f) // Wider button to accommodate text
                 ) {
                     Text(
                         text = buildAnnotatedString {
@@ -239,7 +260,7 @@ fun HeroBannerSection(navController: NavController) {
                             }
                         },
                         fontWeight = FontWeight.SemiBold,
-                        fontSize = 18.sp,
+                        fontSize = 18.sp, // Keeping larger font for impact
                         color = Color.White
                     )
                 }
@@ -264,11 +285,11 @@ fun FeaturedPetsSection(navController: NavController) {
             contentPadding = PaddingValues(horizontal = 4.dp) // Small padding to see card edges
         ) {
             val featuredPets = listOf(
-                Pet(1, "Buddy", "Golden Retriever", "2 years", R.drawable.featured_pet_1),
-                Pet(2, "Whiskers", "Tabby Cat", "1 year", R.drawable.featured_pet_2),
-                Pet(3, "Rocky", "Beagle", "3 years", R.drawable.featured_pet_3),
-                Pet(4, "Luna", "Siamese Cat", "6 months", R.drawable.featured_pet_1), // Example
-                Pet(5, "Max", "Labrador", "4 years", R.drawable.featured_pet_2) // Example
+                Pet(1, "Buddy", "Golden Retriever", "2 years", R.drawable.featuredpet1),
+                Pet(2, "Whiskers", "Tabby Cat", "1 year", R.drawable.featured_pet2),
+                Pet(3, "Rocky", "Beagle", "3 years", R.drawable.featuredpet3),
+                Pet(4, "Luna", "Siamese Cat", "6 months", R.drawable.featuredpet4), // Example
+                Pet(5, "Max", "Labrador", "4 years", R.drawable.dog_image) // Example
             )
             items(featuredPets) { pet ->
                 PetCard(pet = pet) {
@@ -346,9 +367,9 @@ fun WhyAdoptWithUsSection() {
             horizontalArrangement = Arrangement.spacedBy(16.dp)
         ) {
             val features = listOf(
-                Feature(R.drawable.ic_trusted, "Trusted Process", "Verified shelter partners & transparent procedures."),
-                Feature(R.drawable.ic_selection, "Vast Selection", "Browse variety of breeds, ages, and sizes."),
-                Feature(R.drawable.ic_easy_process, "Easy Process", "Simple, quick, and supportive adoption experience."),
+                Feature(R.drawable.baseline_fingerprint_24, "Trusted Process", "Verified shelter partners & transparent procedures."),
+                Feature(R.drawable.baseline_play_arrow_24, "Vast Selection", "Browse variety of breeds, ages, and sizes."),
+                Feature(R.drawable.baseline_domain_verification_24, "Easy Process", "Simple, quick, and supportive adoption experience."),
             )
             features.forEach { feature ->
                 FeatureCard(

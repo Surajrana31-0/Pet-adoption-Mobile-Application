@@ -4,13 +4,29 @@ import android.os.Bundle
 import androidx.activity.ComponentActivity
 import androidx.activity.compose.setContent
 import androidx.activity.enableEdgeToEdge
+import androidx.compose.foundation.layout.Arrangement
+import androidx.compose.foundation.layout.Column
+import androidx.compose.foundation.layout.Spacer
 import androidx.compose.foundation.layout.fillMaxSize
+import androidx.compose.foundation.layout.height
+import androidx.compose.foundation.layout.padding
+import androidx.compose.material3.Button
+import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.Surface
+import androidx.compose.material3.Text
+import androidx.compose.runtime.Composable
+import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
+import androidx.compose.ui.text.font.FontWeight
+import androidx.compose.ui.unit.dp
+import androidx.compose.ui.unit.sp
+import androidx.navigation.NavController
 import com.example.petadoptionmanagement.ui.theme.PetAdoptionManagementTheme
 import androidx.navigation.compose.NavHost
 import androidx.navigation.compose.composable
 import androidx.navigation.compose.rememberNavController
+import com.example.petadoptionmanagement.view.AboutActivity
+import com.example.petadoptionmanagement.view.ContactActivity
 import com.example.petadoptionmanagement.view.HomePageScreen // Import the new homepage screen
 import com.example.petadoptionmanagement.view.SignInActivity // Import your SignInActivity (assuming it's still an Activity)
 import com.example.petadoptionmanagement.view.SignUpActivity // Import your SignUpActivity
@@ -45,17 +61,17 @@ class MainActivity : ComponentActivity() {
                             // navController.navigate("signInComposable") // if you make SignInActivity's UI a composable route
                             // For now, let's just show a placeholder or simplify.
                             // We can create a simple placeholder composable for "login" for now:
-                            LoginRegistrationPlaceholder()
+                            SignUpActivity()
                         }
 
                         // About Page (Placeholder)
                         composable("about") {
-                            AboutPagePlaceholder(navController)
+                            AboutActivity(navController)
                         }
 
                         // Contact Page (Placeholder)
                         composable("contact") {
-                            ContactPagePlaceholder(navController)
+                            ContactActivity(navController)
                         }
 
                         // You might also have routes for SignInScreen, SignUpScreen, ResetPasswordScreen
@@ -73,7 +89,7 @@ class MainActivity : ComponentActivity() {
 
 // --- Placeholder Composable for Login/Registration ---
 @Composable
-fun LoginRegistrationPlaceholder() {
+fun SignUpActivity() {
     // This is a placeholder. In your actual app, you would navigate to your SignInActivity
     // or to a Composable that represents your sign-in/registration flow.
     // For now, it just shows a simple message.
@@ -92,7 +108,7 @@ fun LoginRegistrationPlaceholder() {
 
 // --- Placeholder Composable for About Page ---
 @Composable
-fun AboutPagePlaceholder(navController: NavController) {
+fun AboutActivity(navController: NavController) {
     Surface(color = MaterialTheme.colorScheme.background) {
         Column(
             modifier = Modifier.fillMaxSize().padding(16.dp),
@@ -112,7 +128,7 @@ fun AboutPagePlaceholder(navController: NavController) {
 
 // --- Placeholder Composable for Contact Page ---
 @Composable
-fun ContactPagePlaceholder(navController: NavController) {
+fun ContactActivity(navController: NavController) {
     Surface(color = MaterialTheme.colorScheme.background) {
         Column(
             modifier = Modifier.fillMaxSize().padding(16.dp),

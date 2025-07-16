@@ -50,7 +50,7 @@ dependencies {
     implementation(libs.androidx.ui.graphics)
     implementation(libs.androidx.ui.tooling.preview)
     implementation(libs.androidx.material3)
-    implementation("androidx.compose.material:material-icons-extended")
+
     implementation(libs.firebase.auth)
     implementation(libs.firebase.database)
     testImplementation(libs.junit)
@@ -60,5 +60,22 @@ dependencies {
     androidTestImplementation(libs.androidx.ui.test.junit4)
     debugImplementation(libs.androidx.ui.tooling)
     debugImplementation(libs.androidx.ui.test.manifest)
+    // Jetpack Compose Navigation
+    implementation("androidx.navigation:navigation-compose:2.7.7") // Use the latest stable version
+    implementation("androidx.compose.material:material-icons-extended")
+
+    // Make sure you also have these core Compose dependencies, often managed by a BOM
+    implementation(platform("androidx.compose:compose-bom:2024.04.00")) // Or the latest stable BOM
+    implementation("androidx.compose.ui:ui")
+    implementation("androidx.compose.ui:ui-graphics")
+    implementation("androidx.compose.ui:ui-tooling-preview")
+    implementation("androidx.compose.material3:material3") // For Material Design 3 components
+    debugImplementation("androidx.compose.ui:ui-tooling")
+    debugImplementation("androidx.compose.ui:ui-test-manifest")
+
+    implementation("io.coil-kt:coil-compose:2.6.0") // Use the latest stable version
+
+    implementation(platform("com.google.firebase:firebase-bom:33.1.0"))
+    implementation("com.google.firebase:firebase-firestore-ktx")
 
 }
