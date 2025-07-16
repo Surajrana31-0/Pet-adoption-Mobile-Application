@@ -10,6 +10,7 @@ import androidx.compose.foundation.layout.*
 import androidx.compose.foundation.rememberScrollState
 import androidx.compose.foundation.verticalScroll
 import androidx.compose.foundation.shape.RoundedCornerShape
+import androidx.compose.material3.ElevatedCard
 import androidx.compose.material3.*
 import androidx.compose.material3.CardDefaults
 import androidx.compose.runtime.Composable
@@ -255,9 +256,10 @@ fun FeatureCard(
     description: String,
     modifier: Modifier = Modifier
 ) {
-    Card(
+    ElevatedCard(
         shape = RoundedCornerShape(20.dp),
         modifier = modifier.height(170.dp),
+        // The elevation parameter is still the same.
         elevation = CardDefaults.elevatedCardElevation(defaultElevation = 8.dp)
     ) {
         Column(
