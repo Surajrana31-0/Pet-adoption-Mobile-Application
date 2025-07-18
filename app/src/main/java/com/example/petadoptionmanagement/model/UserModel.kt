@@ -1,14 +1,17 @@
 package com.example.petadoptionmanagement.model
 
+/**
+ * Data class representing a User in the application.
+ * This acts as the Model in the MVVM architecture for user data.
+ *
+ * @property userId Unique identifier for the user (Firebase Authentication UID).
+ * @property username The chosen username for the user.
+ * @property email The email address of the user.
+ */
 data class UserModel(
-    val id: String = "",
-    val username: String = "",
-    val email: String = "",
-    val password: String = "",
-    val profileImageUrl: String? = null,
-    val phone: String? = null,
-    val address: String? = null,
-    val bio: String? = null,
-    val createdAt: Long = System.currentTimeMillis(),
-    val updatedAt: Long = System.currentTimeMillis()
+    var userId: String = "",
+    var username: String = "",
+    var email: String = ""
+    // Password is not stored directly in the UserModel for security reasons
+    // as Firebase Authentication handles password hashing and storage internally.
 )

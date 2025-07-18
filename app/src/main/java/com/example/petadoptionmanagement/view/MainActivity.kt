@@ -25,12 +25,19 @@ import com.example.petadoptionmanagement.ui.theme.PetAdoptionManagementTheme
 import androidx.navigation.compose.NavHost
 import androidx.navigation.compose.composable
 import androidx.navigation.compose.rememberNavController
-import com.example.petadoptionmanagement.view.AboutActivity
-import com.example.petadoptionmanagement.view.ContactActivity
-import com.example.petadoptionmanagement.view.HomePageScreen // Import the new homepage screen
-import com.example.petadoptionmanagement.view.SignInActivity // Import your SignInActivity (assuming it's still an Activity)
-import com.example.petadoptionmanagement.view.SignUpActivity // Import your SignUpActivity
-import com.example.petadoptionmanagement.view.ResetPasswordActivity // Import your ResetPasswordActivity
+import androidx.navigation.NavType // Added import
+import androidx.navigation.navArgument // Added import
+
+// Import the Composable functions for your screens (assuming conversion)
+import com.example.petadoptionmanagement.view.HomePageScreen
+import com.example.petadoptionmanagement.view.SignInScreen // Assuming you've converted this to a Composable
+import com.example.petadoptionmanagement.view.SignUpScreen // Assuming you've converted this to a Composable
+import com.example.petadoptionmanagement.view.ResetPasswordScreen // Assuming you've converted this to a Composable
+import com.example.petadoptionmanagement.view.ContactScreen // Assuming you've converted this to a Composable
+import com.example.petadoptionmanagement.view.ConsultScreen // Assuming you've converted this to a Composable
+import com.example.petadoptionmanagement.view.AdoptionScreen // Assuming you've converted this to a Composable
+import com.example.petadoptionmanagement.view.ProfileViewScreen // Assuming you've converted this to a Composable
+import com.example.petadoptionmanagement.view.UserProfile // Assuming UserProfile is accessible
 
 class MainActivity : ComponentActivity() {
     override fun onCreate(savedInstanceState: Bundle?) {
@@ -38,7 +45,6 @@ class MainActivity : ComponentActivity() {
         enableEdgeToEdge()
         setContent {
             PetAdoptionManagementTheme {
-                // A surface container using the 'background' color from the theme
                 Surface(modifier = Modifier.fillMaxSize()) {
                     val navController = rememberNavController()
 
@@ -48,38 +54,90 @@ class MainActivity : ComponentActivity() {
                             HomePageScreen(navController = navController)
                         }
 
-                        // Login/Registration Screen (using the actual Activity for now)
-                        // In a real app, you might have a Composable for Login/Registration within NavHost
-                        // For demonstration, we'll start the Activity directly.
+                        // Authentication Screens (assuming they are now Composable functions)
                         composable("login") {
-                            // This will typically involve launching an Activity for non-composable screens
-                            // or navigating to a Composable login screen.
-                            // For simplicity, let's assume we navigate to SignInActivity.
-                            // If SignInActivity was also a Composable, you'd call @Composable SignInScreen() here.
-                            // As SignInActivity is a ComponentActivity, we'd traditionally launch it.
-                            // For direct composable navigation:
-                            // navController.navigate("signInComposable") // if you make SignInActivity's UI a composable route
-                            // For now, let's just show a placeholder or simplify.
-                            // We can create a simple placeholder composable for "login" for now:
-                            SignUpActivity()
+                            SignInScreen(
+                                navController = navController,
+                                onSignInClick = { email, password -> /* TODO: Implement actual sign-in logic */ },
+                                onForgotPasswordClick = { navController.navigate("resetPassword") },
+                                onSignUpClick = { navController.navigate("signup") }
+                            )
+                        }
+                        composable("signup") {
+                            SignUpScreen(
+                                navController = navController, // Pass navController to SignUpScreen
+                                onCreateAccountClick = { username, email, password -> /* TODO: Implement actual sign-up logic */ },
+                                onSignInClick = { navController.navigate("login") }
+                            )
+                        }
+                        composable("resetPassword") {
+                            ResetPasswordScreen(
+                                navController = navController, // Pass navController to ResetPasswordScreen
+                                onResetPasswordClick = { email, newPassword -> /* TODO: Implement actual password reset logic */ },
+                                onBackToSignInClick = { navController.navigate("login") }
+                            )
                         }
 
-                        // About Page (Placeholder)
-                        composable("about") {
-                            AboutActivity(navController)
-                        }
-
-                        // Contact Page (Placeholder)
+                        // Main App Screens
                         composable("contact") {
-                            ContactActivity(navController)
+                            ContactScreen(
+                                navController = navController,
+                                onSendMessage = { message -> /* TODO: Send message logic */ },
+                                onBackClick = { navController.popBackStack() },
+                                onLogout = { /* TODO: Logout logic, navigate to login */ navController.navigate("login") { popUpTo("home") { inclusive = true } } },
+                                onViewProfile = { navController.navigate("profileView/current_user_id") }, // Example: Pass a user ID
+                                userProfile = UserProfile(name = "User", email = "user@example.com"), // Dummy data
+                                isLoggedIn = true // Dummy state
+                            )
                         }
 
-                        // You might also have routes for SignInScreen, SignUpScreen, ResetPasswordScreen
-                        // if you convert them to Composable functions instead of separate Activities.
-                        // For example:
-                        // composable("signInComposable") { SignInScreen(...) }
-                        // composable("signUpComposable") { SignUpScreen(...) }
-                        // composable("resetPasswordComposable") { ResetPasswordScreen(...) }
+                        composable("consult") {
+                            ConsultScreen(
+                                navController = navController,
+                                onBackClick = { navController.popBackStack() },
+                                onLogout = { /* TODO: Logout logic */ navController.navigate("login") { popUpTo("home") { inclusive = true } } },
+                                onViewProfile = { navController.navigate("profileView/current_user_id") },
+                                userProfile = UserProfile(name = "User", email = "user@example.com"),
+                                isLoggedIn = true
+                            )
+                        }
+
+                        // --- Adoption Detail Screen ---
+                        composable(
+                            "adoption/{petId}", // Define the route with a placeholder for petId
+                            arguments = listOf(navArgument("petId") { type = NavType.StringType }) // Declare the argument type
+                        ) { backStackEntry ->
+                            // Retrieve the petId from the navigation arguments
+                            val petId = backStackEntry.arguments?.getString("petId") ?: "default_pet_id"
+                            AdoptionScreen(
+                                navController = navController,
+                                petId = petId, // Pass the retrieved petId to the AdoptionScreen
+                                onBackClick = { navController.popBackStack() },
+                                onContactClick = { navController.navigate("contact") },
+                                onAdoptClick = { petName -> /* TODO: Adoption logic */ },
+                                onLogout = { /* TODO: Logout logic */ navController.navigate("login") { popUpTo("home") { inclusive = true } } },
+                                onViewProfile = { navController.navigate("profileView/current_user_id") },
+                                userProfile = UserProfile(name = "User", email = "user@example.com"),
+                                isLoggedIn = true
+                            )
+                        }
+
+                        // About Page
+                        composable("about") {
+                            AboutScreen(navController = navController)
+                        }
+
+                        // Profile View Screen (receives userId argument)
+                        composable(
+                            "profileView/{userId}",
+                            arguments = listOf(navArgument("userId") { type = NavType.StringType })
+                        ) { backStackEntry ->
+                            val userId = backStackEntry.arguments?.getString("userId") ?: "default_user_id"
+                            ProfileViewScreen(
+                                navController = navController,
+                                userProfile = UserProfile(name = "User $userId", email = "$userId@example.com"), // Dummy data
+                            )
+                        }
                     }
                 }
             }
@@ -87,28 +145,9 @@ class MainActivity : ComponentActivity() {
     }
 }
 
-// --- Placeholder Composable for Login/Registration ---
+// --- Placeholder Composable for About Page (now AboutScreen) ---
 @Composable
-fun SignUpActivity() {
-    // This is a placeholder. In your actual app, you would navigate to your SignInActivity
-    // or to a Composable that represents your sign-in/registration flow.
-    // For now, it just shows a simple message.
-    Surface(color = MaterialTheme.colorScheme.background) {
-        Column(
-            modifier = Modifier.fillMaxSize(),
-            verticalArrangement = Arrangement.Center,
-            horizontalAlignment = Alignment.CenterHorizontally
-        ) {
-            Text("Login / Registration Screen", fontSize = 24.sp, fontWeight = FontWeight.Bold)
-            Spacer(modifier = Modifier.height(16.dp))
-            Text("This is where users would sign in or register to adopt a pet.")
-        }
-    }
-}
-
-// --- Placeholder Composable for About Page ---
-@Composable
-fun AboutActivity(navController: NavController) {
+fun AboutScreen(navController: NavController) {
     Surface(color = MaterialTheme.colorScheme.background) {
         Column(
             modifier = Modifier.fillMaxSize().padding(16.dp),
@@ -126,22 +165,10 @@ fun AboutActivity(navController: NavController) {
     }
 }
 
-// --- Placeholder Composable for Contact Page ---
-@Composable
-fun ContactActivity(navController: NavController) {
-    Surface(color = MaterialTheme.colorScheme.background) {
-        Column(
-            modifier = Modifier.fillMaxSize().padding(16.dp),
-            verticalArrangement = Arrangement.Center,
-            horizontalAlignment = Alignment.CenterHorizontally
-        ) {
-            Text("Contact Us", fontSize = 24.sp, fontWeight = FontWeight.Bold)
-            Spacer(modifier = Modifier.height(16.dp))
-            Text("Reach out to us via email or phone for any inquiries.")
-            Spacer(modifier = Modifier.height(16.dp))
-            Button(onClick = { navController.popBackStack() }) {
-                Text("Go Back")
-            }
-        }
-    }
-}
+// NOTE: The placeholder `SignUpActivity()` and `ContactActivity()`
+// and `AboutActivity()` composables from your previous code have been
+// removed here, as the expectation is that their actual UI content
+// has been moved into dedicated Composable functions (e.g., `SignUpScreen`,
+// `ContactScreen`, `AboutScreen`) as discussed in the previous turn.
+// If you still have `SignUpActivity` defined as a Composable, please rename it to `SignUpScreen`
+// to avoid confusion with an actual Android Activity class.
