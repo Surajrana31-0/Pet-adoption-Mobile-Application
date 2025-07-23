@@ -11,6 +11,10 @@ package com.example.petadoptionmanagement.model
 data class UserModel(
     var userId: String = "",
     var username: String = "",
+    var firstname: String = "",
+    var lastname: String = "",
+    var contact: String = "",
+    var address: String = "",
     var email: String = ""
     // Password is not stored directly in the UserModel for security reasons
     // as Firebase Authentication handles password hashing and storage internally.

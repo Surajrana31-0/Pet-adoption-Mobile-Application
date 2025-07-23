@@ -3,8 +3,10 @@ package com.example.petadoptionmanagement.viewmodel
 import androidx.lifecycle.LiveData
 import androidx.lifecycle.MutableLiveData
 import androidx.lifecycle.ViewModel
+import androidx.lifecycle.viewModelScope // Import for viewModelScope
 import com.example.petadoptionmanagement.model.PetModel
 import com.example.petadoptionmanagement.repository.PetRepository
+import kotlinx.coroutines.launch // Import for launch
 
 /**
  * ViewModel for Pet-related operations.
@@ -25,6 +27,21 @@ class PetViewModel(private val repo: PetRepository) : ViewModel() {
     private val _loading = MutableLiveData<Boolean>()
     val loading: LiveData<Boolean> get() = _loading
 
+    // **** START OF NEW CODE ****
+    // LiveData for UI messages (e.g., success/error toasts)
+    private val _message = MutableLiveData<String?>() // String? allows it to be null when no message
+    val message: LiveData<String?> = _message // Public LiveData for UI to observe
+
+    /**
+     * Call this function after the message has been shown in the UI
+     * to prevent it from being shown again on configuration change or recomposition.
+     */
+    fun clearMessage() {
+        _message.value = null
+    }
+    // **** END OF NEW CODE ****
+
+
     /**
      * Initiates the process of adding a new pet via the repository.
      * @param petModel The PetModel object to add.
@@ -32,9 +49,16 @@ class PetViewModel(private val repo: PetRepository) : ViewModel() {
      */
     fun addNewPet(
         petModel: PetModel,
-        callback: (Boolean, String) -> Unit
+        callback: (Boolean, String) -> Unit // You might want to remove this callback if message LiveData handles it
     ) {
-        repo.addPet(petModel, callback)
+        // You'll want to use viewModelScope for coroutines if your repo methods are suspend functions
+        // For now, assuming repo.addPet handles its own threading or is synchronous for the callback
+        repo.addPet(petModel) { success, msg ->
+            _message.postValue(msg) // Post the message from the repository callback
+            callback(success, msg)
+            // If the callback is solely for showing a Toast, you might remove it
+            // and let the UI observe the `message` LiveData.
+        }
     }
 
     /**
@@ -44,11 +68,13 @@ class PetViewModel(private val repo: PetRepository) : ViewModel() {
     fun getPetById(
         petID: String,
     ) {
-        repo.getPetById(petID) { success, message, value ->
+        // This function updates _pet, but you might also want to post a message on failure
+        repo.getPetById(petID) { success, msg, value -> // Assuming callback provides a message
             if (success) {
                 _pet.postValue(value)
             } else {
                 _pet.postValue(null) // Post null or handle error state if pet not found
+                _message.postValue(msg ?: "Failed to fetch pet details.") // Post an error message
             }
         }
     }
@@ -58,13 +84,13 @@ class PetViewModel(private val repo: PetRepository) : ViewModel() {
      */
     fun getAllPets() {
         _loading.postValue(true) // Indicate loading started
-        repo.getAllPets { success, message, value ->
+        repo.getAllPets { success, msg, value -> // Assuming callback provides a message
+            _loading.postValue(false) // Indicate loading finished
             if (success) {
-                _loading.postValue(false) // Indicate loading finished
                 _allPets.postValue(value) // Post the list of pets
             } else {
-                _loading.postValue(false) // Indicate loading finished
                 _allPets.postValue(emptyList()) // Post an empty list on failure
+                _message.postValue(msg ?: "Failed to fetch pets.") // Post an error message
             }
         }
     }
@@ -78,9 +104,12 @@ class PetViewModel(private val repo: PetRepository) : ViewModel() {
     fun updatePet(
         petId: String,
         data: MutableMap<String, Any?>,
-        callback: (Boolean, String) -> Unit
+        callback: (Boolean, String) -> Unit // Similar to addNewPet, consider if this callback is still needed
     ) {
-        repo.updatePet(petId, data, callback)
+        repo.updatePet(petId, data) { success, msg ->
+            _message.postValue(msg) // Post the message
+            callback(success, msg)
+        }
     }
 
     /**
@@ -90,8 +119,11 @@ class PetViewModel(private val repo: PetRepository) : ViewModel() {
      */
     fun deletePet(
         petId: String,
-        callback: (Boolean, String) -> Unit
+        callback: (Boolean, String) -> Unit // Similar to addNewPet, consider if this callback is still needed
     ) {
-        repo.deletePet(petId, callback)
+        repo.deletePet(petId) { success, msg ->
+            _message.postValue(msg) // Post the message
+            callback(success, msg)
+        }
     }
 }

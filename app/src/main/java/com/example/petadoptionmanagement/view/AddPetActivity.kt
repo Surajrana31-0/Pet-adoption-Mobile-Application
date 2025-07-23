@@ -2,6 +2,7 @@ package com.example.petadoptionmanagement.view
 
 import android.widget.Toast
 import androidx.compose.foundation.clickable
+import androidx.compose.material3.Text
 import androidx.compose.foundation.layout.*
 import androidx.compose.foundation.lazy.LazyColumn
 import androidx.compose.foundation.shape.RoundedCornerShape

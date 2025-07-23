@@ -1,6 +1,7 @@
 package com.example.petadoptionmanagement.repository
 
 import com.example.petadoptionmanagement.model.UserModel
+import com.google.firebase.auth.FirebaseUser
 
 /**
  * Interface defining the contract for user data operations.
@@ -45,6 +46,22 @@ interface UserRepository {
      */
     fun signOut(callback: (Boolean, String) -> Unit)
 
+    fun addUserToDatabase(
+        userId: String, model: UserModel,
+        callback: (Boolean, String) -> Unit
+
+    )
+
+    fun forgetPassword(email: String, callback: (Boolean, String) -> Unit)
+
+    fun getCurrentUser(): FirebaseUser?
+
+    fun getUserFromDatabase(
+        userId: String,
+        callback: (Boolean, String, UserModel?) -> Unit
+    )
+
+
     /**
      * Retrieves the currently logged-in user's data.
      *
@@ -60,4 +77,8 @@ interface UserRepository {
      * or false and null if no user is logged in.
      */
     fun observeAuthState(callback: (Boolean, UserModel?) -> Unit)
+
+
 }
+
+
