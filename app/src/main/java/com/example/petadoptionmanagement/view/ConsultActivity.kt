@@ -37,6 +37,11 @@ import com.example.petadoptionmanagement.R
 import com.example.petadoptionmanagement.ui.theme.PetAdoptionManagementTheme
 import com.example.petadoptionmanagement.model.UserProfile // IMPORTED UserProfile
 
+
+// Add these imports:
+import com.example.petadoptionmanagement.view.SignInActivity //
+import com.example.petadoptionmanagement.view.SignUpActivity //
+
 // Data class to represent a Doctor (keeping it here for now as it's specific to this screen)
 data class Doctor(
     val id: Int,

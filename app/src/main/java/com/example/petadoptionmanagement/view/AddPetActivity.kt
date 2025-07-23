@@ -1,8 +1,11 @@
 package com.example.petadoptionmanagement.view
 
+import android.os.Bundle
 import android.widget.Toast
+import androidx.activity.ComponentActivity
+import androidx.activity.compose.setContent
+import androidx.activity.enableEdgeToEdge
 import androidx.compose.foundation.clickable
-import androidx.compose.material3.Text
 import androidx.compose.foundation.layout.*
 import androidx.compose.foundation.lazy.LazyColumn
 import androidx.compose.foundation.shape.RoundedCornerShape
@@ -19,14 +22,50 @@ import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.tooling.preview.Preview
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
+import androidx.lifecycle.ViewModelProvider // For ViewModelProvider
 import androidx.navigation.NavController
 import androidx.navigation.compose.rememberNavController
-import com.example.petadoptionmanagement.model.PetModel
-import com.example.petadoptionmanagement.repository.PetRepositoryImpl
+import com.example.petadoptionmanagement.model.PetModel // Make sure PetModel is correctly imported from model package
+import com.example.petadoptionmanagement.repository.PetRepositoryImpl // Make sure PetRepositoryImpl is correctly imported
 import com.example.petadoptionmanagement.view.ui.theme.PetAdoptionManagementTheme
-import com.example.petadoptionmanagement.viewmodel.PetViewModel
-import com.example.petadoptionmanagement.viewmodel.PetViewModelFactory
-import androidx.lifecycle.viewmodel.compose.viewModel // For preview
+import com.example.petadoptionmanagement.viewmodel.PetViewModel // Make sure PetViewModel is correctly imported
+import com.example.petadoptionmanagement.viewmodel.PetViewModelFactory // Make sure PetViewModelFactory is correctly imported
+import androidx.lifecycle.viewmodel.compose.viewModel // For @Preview context
+
+/**
+ * Activity that hosts the AddPetScreen composable.
+ * This acts as the entry point for the "Add New Pet" functionality.
+ */
+class AddPetActivity : ComponentActivity() {
+    private lateinit var petViewModel: PetViewModel // Declare ViewModel here
+
+    override fun onCreate(savedInstanceState: Bundle?) {
+        super.onCreate(savedInstanceState)
+        enableEdgeToEdge()
+
+        // Initialize PetViewModel using the factory
+        // You'll need to provide an actual PetRepository instance here.
+        // For a real app, you might use dependency injection (e.g., Hilt/Koin)
+        // to provide the repository. For simplicity, we instantiate it here.
+        val petRepository = PetRepositoryImpl() // Replace with your actual repository instance
+        val factory = PetViewModelFactory(petRepository)
+        petViewModel = ViewModelProvider(this, factory).get(PetViewModel::class.java)
+
+        setContent {
+            PetAdoptionManagementTheme {
+                // Ensure navController is passed
+                val navController = rememberNavController() // If AddPetActivity is part of a larger navigation graph,
+                // you'd pass a common navController from the parent.
+                // For stand-alone activity, this is fine.
+                AddPetScreen(
+                    navController = navController,
+                    petViewModel = petViewModel // Pass the initialized ViewModel
+                )
+            }
+        }
+    }
+}
+
 
 /**
  * Composable screen for adding a new pet.
@@ -69,7 +108,7 @@ fun AddPetScreen(
         if (message.isNotBlank()) {
             Toast.makeText(context, message, Toast.LENGTH_SHORT).show()
             // Optionally, clear the message in ViewModel after showing
-            // petViewModel.clearMessage() // You might add this function to PetViewModel
+            // petViewModel.clearMessage() // You might add this function to PetViewModel to prevent repeat toasts
         }
     }
 
@@ -268,20 +307,23 @@ fun AddPetScreen(
                             }
                         }
 
-                        // Image Upload Placeholder
+                        // Image Upload Placeholder (Action needs to be implemented)
                         Row(
                             modifier = Modifier.fillMaxWidth(),
                             verticalAlignment = Alignment.CenterVertically,
                             horizontalArrangement = Arrangement.spacedBy(8.dp)
                         ) {
                             Button(
-                                onClick = { Toast.makeText(context, "Image upload not implemented yet", Toast.LENGTH_SHORT).show() },
+                                onClick = {
+                                    // TODO: Implement actual image picking and Cloudinary upload here
+                                    Toast.makeText(context, "Image upload feature coming soon!", Toast.LENGTH_SHORT).show()
+                                },
                                 colors = ButtonDefaults.buttonColors(containerColor = Color.LightGray),
                                 shape = RoundedCornerShape(8.dp)
                             ) {
                                 Text("Choose File", color = Color(0xFF22223B))
                             }
-                            Text("No file chosen", color = Color.Gray)
+                            Text("No file chosen", color = Color.Gray) // This should update with selected file name
                         }
 
                         Spacer(modifier = Modifier.height(16.dp))
@@ -300,20 +342,28 @@ fun AddPetScreen(
                                     }
 
                                     val newPet = PetModel(
-                                        petId = "", // Firebase will generate this
+                                        petId = "", // Firebase will generate this, or you can generate a UUID
                                         petName = petName,
                                         petBreed = petBreed,
                                         petType = petType,
                                         petAge = petAge,
                                         petDescription = petDescription,
                                         petStatus = petStatus,
-                                        petImageUrl = petImageUrl // Use placeholder for now
+                                        petImageUrl = petImageUrl // This will be the Cloudinary URL after upload
                                     )
 
                                     petViewModel.addNewPet(newPet) { success, message ->
                                         if (success) {
                                             Toast.makeText(context, message, Toast.LENGTH_LONG).show()
-                                            navController.popBackStack() // Navigate back to dashboard
+                                            // Clear form fields after successful addition
+                                            petName = ""
+                                            petBreed = ""
+                                            petType = "Dog"
+                                            petAge = ""
+                                            petDescription = ""
+                                            petStatus = "Available"
+                                            petImageUrl = ""
+                                            navController.popBackStack() // Navigate back to dashboard or appropriate screen
                                         } else {
                                             Toast.makeText(context, "Error: $message", Toast.LENGTH_LONG).show()
                                         }
@@ -321,7 +371,9 @@ fun AddPetScreen(
                                 },
                                 colors = ButtonDefaults.buttonColors(containerColor = Color(0xFF8B4513)),
                                 shape = RoundedCornerShape(12.dp),
-                                modifier = Modifier.weight(1f).height(50.dp),
+                                modifier = Modifier
+                                    .weight(1f)
+                                    .height(50.dp),
                                 enabled = !isLoading // Disable button while loading
                             ) {
                                 if (isLoading) {
@@ -336,7 +388,9 @@ fun AddPetScreen(
                                 colors = ButtonDefaults.outlinedButtonColors(contentColor = Color(0xFF4A4E69)),
                                 border = ButtonDefaults.outlinedButtonBorder.copy(width = 2.dp, color = Color(0xFF4A4E69)),
                                 shape = RoundedCornerShape(12.dp),
-                                modifier = Modifier.weight(1f).height(50.dp),
+                                modifier = Modifier
+                                    .weight(1f)
+                                    .height(50.dp),
                                 enabled = !isLoading
                             ) {
                                 Text("Cancel", fontSize = 16.sp)
@@ -354,8 +408,10 @@ fun AddPetScreen(
 fun AddPetScreenPreview() {
     PetAdoptionManagementTheme {
         val navController = rememberNavController()
-        val dummyRepo = remember { PetRepositoryImpl() }
-        val dummyViewModel = viewModel<PetViewModel>(factory = PetViewModelFactory(dummyRepo))
+        // Provide a dummy PetRepositoryImpl for the preview
+        val dummyRepository = remember { PetRepositoryImpl() }
+        // Use `viewModel` from `androidx.lifecycle.viewmodel.compose.viewModel` for preview context
+        val dummyViewModel = viewModel<PetViewModel>(factory = PetViewModelFactory(dummyRepository))
         AddPetScreen(navController = navController, petViewModel = dummyViewModel)
     }
 }

@@ -1,6 +1,11 @@
 package com.example.petadoptionmanagement.view
 
+import android.content.Intent
+import android.os.Bundle
 import android.widget.Toast
+import androidx.activity.ComponentActivity
+import androidx.activity.compose.setContent
+import androidx.activity.enableEdgeToEdge
 import androidx.compose.foundation.Image
 import androidx.compose.foundation.background
 import androidx.compose.foundation.clickable
@@ -29,19 +34,104 @@ import androidx.compose.ui.text.style.TextDecoration
 import androidx.compose.ui.tooling.preview.Preview
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
+import androidx.lifecycle.ViewModelProvider // Added import for ViewModelProvider
 import androidx.navigation.NavController
 import androidx.navigation.compose.rememberNavController
 import com.example.petadoptionmanagement.R
+import com.example.petadoptionmanagement.repository.UserRepositoryImpl // Assuming you have this
 import com.example.petadoptionmanagement.ui.theme.PetAdoptionManagementTheme
-import com.example.petadoptionmanagement.viewmodel.UserViewModel // Import UserViewModel
+import com.example.petadoptionmanagement.viewmodel.UserViewModel
+import com.example.petadoptionmanagement.viewmodel.UserViewModelFactory // Assuming you have this
 
-// IMPORTANT: The `SignUpActivity` class is removed. This Composable function
-// will be directly used by your `MainActivity`'s NavHost.
+/**
+ * SignUpActivity: This is the Android Activity that will host your SignUpScreen UI.
+ * It's responsible for setting up the Compose content, managing the ViewModel lifecycle,
+ * and handling navigation that involves transitioning between different Activities.
+ */
+class SignUpActivity : ComponentActivity() {
 
+    private lateinit var userViewModel: UserViewModel // Declare ViewModel
+
+    override fun onCreate(savedInstanceState: Bundle?) {
+        super.onCreate(savedInstanceState)
+        enableEdgeToEdge()
+
+        // Initialize UserViewModel using the factory
+        // Ensure UserRepositoryImpl and UserViewModelFactory are correctly set up.
+        val userRepository = UserRepositoryImpl(applicationContext)
+        val factory = UserViewModelFactory(userRepository)
+        userViewModel = ViewModelProvider(this, factory)[UserViewModel::class.java]
+
+        setContent {
+            PetAdoptionManagementTheme {
+                val activityContext = LocalContext.current // Get context for Intents
+
+                // Observe isLoggedIn from ViewModel to navigate after successful signup/login
+                val isLoggedIn by userViewModel.isLoggedIn.observeAsState(initial = false)
+                val message by userViewModel.message.observeAsState(initial = "")
+
+                // Effect for displaying messages (success/failure)
+                LaunchedEffect(message) {
+                    if (message.isNotBlank()) {
+                        Toast.makeText(activityContext, message, Toast.LENGTH_SHORT).show()
+                        // Optionally clear the message after showing if ViewModel has clearMessage()
+                        // userViewModel.clearMessage()
+                    }
+                }
+
+                // Effect for handling navigation after successful sign-up and auto-login
+                // This logic is now within the Activity, as it handles Activity transitions.
+                LaunchedEffect(isLoggedIn) {
+                    if (isLoggedIn) {
+                        Toast.makeText(activityContext, "Sign Up Successful! Welcome.", Toast.LENGTH_SHORT).show()
+                        val intent = Intent(activityContext, HomePage::class.java) // Navigate to HomePage
+                        intent.flags = Intent.FLAG_ACTIVITY_NEW_TASK or Intent.FLAG_ACTIVITY_CLEAR_TASK // Clear back stack
+                        startActivity(intent)
+                        finish() // Finish SignUpActivity
+                    }
+                }
+
+                // Pass a dummy NavController for composables that expect one,
+                // or if you plan to use an internal NavHost later.
+                // For direct Activity-to-Activity navigation, it's not strictly necessary for the main call.
+                val dummyNavController = rememberNavController()
+
+                // Call the Composable function that defines the UI content
+                SignUpScreenContent(
+                    navController = dummyNavController, // Pass it down, even if its main navigation is handled by Activity
+                    userViewModel = userViewModel,
+                    // Pass current isLoggedIn state and message from ViewModel
+                    isLoading = userViewModel.isLoading.observeAsState(initial = false).value,
+                    onNavigateToSignIn = {
+                        val intent = Intent(activityContext, SignInActivity::class.java)
+                        startActivity(intent)
+                        finish() // Finish SignUpActivity if moving to SignIn (optional, depends on UX)
+                    },
+                    onSubmitSignUp = { username, email, password ->
+                        // This lambda calls the ViewModel's signUp function
+                        userViewModel.signUp(username, email, password) { success, msg ->
+                            // The LaunchedEffect above handles success. Errors will update `message` LiveData.
+                        }
+                    }
+                )
+            }
+        }
+    }
+}
+
+/**
+ * SignUpScreenContent: This is the Composable function that builds the actual UI for the sign-up form.
+ * It's designed to be reusable and display the UI, while the hosting Activity/Fragment
+ * manages its lifecycle and data (via ViewModel).
+ */
+@OptIn(ExperimentalMaterial3Api::class)
 @Composable
-fun SignUpScreen(
-    navController: NavController, // NavController for navigation
-    userViewModel: UserViewModel // UserViewModel for authentication logic
+fun SignUpScreenContent(
+    navController: NavController, // Still needed for internal navigation (e.g., to login route if it were a NavHost)
+    userViewModel: UserViewModel, // ViewModel for data operations
+    isLoading: Boolean, // Pass isLoading state explicitly
+    onNavigateToSignIn: () -> Unit, // Callback for "sign in" button
+    onSubmitSignUp: (String, String, String) -> Unit // Callback for "Create Account" button
 ) {
     val context = LocalContext.current
 
@@ -53,37 +143,11 @@ fun SignUpScreen(
     var confirmPasswordVisible by remember { mutableStateOf(false) }
     var termsAccepted by remember { mutableStateOf(false) }
 
-    // Observe LiveData from the UserViewModel
-    val isLoading by userViewModel.isLoading.observeAsState(initial = userViewModel.isLoading.value ?: false)
-    val message by userViewModel.message.observeAsState(initial = userViewModel.message.value ?: "")
-    // isLoggedIn is observed by MainActivity for main navigation, but can be useful here too if needed.
-    val isLoggedIn by userViewModel.isLoggedIn.observeAsState(initial = false)
-
-
     // Define custom colors to match the image
     val backgroundColor = Color(0xFF6B8E23) // Olive green background
     val cardBackgroundColor = Color(0xFFDCDCDC) // Light grey for the signup card
     val buttonColor = Color(0xFF8B4513) // Reddish-brown for the Create Account button
     val textFieldBackgroundColor = Color(0xFFFFFFFF) // White for input fields
-
-    // Effect for displaying messages (success/failure)
-    LaunchedEffect(message) {
-        if (message.isNotBlank()) {
-            Toast.makeText(context, message, Toast.LENGTH_SHORT).show()
-            // Optionally clear the message after showing
-            // userViewModel.clearMessage() // You might add a clearMessage() function in ViewModel
-        }
-    }
-
-    // Effect for handling navigation after successful sign-up and auto-login
-    LaunchedEffect(isLoggedIn) {
-        if (isLoggedIn) {
-            // After successful sign-up and auto-login, navigate to the home screen
-            navController.navigate("home") {
-                popUpTo("login") { inclusive = true } // Clear login/signup from back stack
-            }
-        }
-    }
 
 
     Box(
@@ -110,7 +174,7 @@ fun SignUpScreen(
             ) {
                 // Paw Print Icon
                 Image(
-                    painter = painterResource(id = R.drawable.paw_print),
+                    painter = painterResource(id = R.drawable.paw_print), // Ensure this drawable exists
                     contentDescription = "Paw Print Icon",
                     modifier = Modifier.size(48.dp)
                 )
@@ -122,7 +186,6 @@ fun SignUpScreen(
                     modifier = Modifier
                         .size(36.dp)
                         .clickable {
-                            // This will still show a Toast as per your original UI
                             Toast.makeText(context, "Menu icon clicked!", Toast.LENGTH_SHORT).show()
                         }
                 )
@@ -144,7 +207,7 @@ fun SignUpScreen(
                 contentAlignment = Alignment.BottomCenter
             ) {
                 Image(
-                    painter = painterResource(id = R.drawable.dog_image),
+                    painter = painterResource(id = R.drawable.dog_image), // Ensure this drawable exists
                     contentDescription = "Dog looking up",
                     contentScale = ContentScale.Crop,
                     modifier = Modifier
@@ -304,13 +367,8 @@ fun SignUpScreen(
                         } else if (!termsAccepted) {
                             Toast.makeText(context, "Please accept the terms and policy.", Toast.LENGTH_SHORT).show()
                         } else {
-                            // Call the ViewModel's signUp function
-                            // IMPORTANT: Ensure your UserViewModel.signUp method is updated
-                            // to accept username, email, and password.
-                            userViewModel.signUp(username, email, password) { success, message ->
-                                // The LaunchedEffect will handle the navigation and toasts
-                                // No direct navigation or toast needed here.
-                            }
+                            // Call the onSubmitSignUp callback, which is handled by the Activity
+                            onSubmitSignUp(username, email, password)
                         }
                     },
                     modifier = Modifier
@@ -345,8 +403,8 @@ fun SignUpScreen(
                     )
                     Spacer(modifier = Modifier.width(4.dp))
                     TextButton(onClick = {
-                        // Navigate to the login screen
-                        navController.navigate("login")
+                        // Use the callback to navigate to SignIn Activity
+                        onNavigateToSignIn()
                     }) {
                         Text(
                             "sign in",
@@ -364,16 +422,19 @@ fun SignUpScreen(
 
 @Preview(showBackground = true)
 @Composable
-fun SignUpPreview() {
+fun SignUpScreenContentPreview() {
     PetAdoptionManagementTheme {
-        // For preview, you'd typically pass a mock ViewModel or handle states manually.
-        // For simplicity, we'll create a dummy ViewModel and NavController here.
         val context = LocalContext.current
-        val dummyNavController = rememberNavController()
-        val dummyUserViewModel = remember {
-            com.example.petadoptionmanagement.repository.UserRepositoryImpl(context) // Assuming UserRepositoryImpl is accessible
-            com.example.petadoptionmanagement.viewmodel.UserViewModel(com.example.petadoptionmanagement.repository.UserRepositoryImpl(context))
-        }
-        SignUpScreen(navController = dummyNavController, userViewModel = dummyUserViewModel)
+        val dummyNavController = rememberNavController() // For preview only
+        val dummyUserRepository = remember { UserRepositoryImpl(context) }
+        val dummyUserViewModel = remember { UserViewModel(dummyUserRepository) }
+
+        SignUpScreenContent(
+            navController = dummyNavController,
+            userViewModel = dummyUserViewModel,
+            isLoading = false,
+            onNavigateToSignIn = { /* Preview action */ },
+            onSubmitSignUp = { _, _, _ -> /* Preview action */ }
+        )
     }
 }

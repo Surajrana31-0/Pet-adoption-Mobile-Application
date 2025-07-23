@@ -1,7 +1,5 @@
 package com.example.petadoptionmanagement.view
 
-
-import com.example.petadoptionmanagement.R
 import android.os.Bundle
 import androidx.activity.ComponentActivity
 import androidx.activity.compose.setContent
@@ -31,28 +29,27 @@ import androidx.compose.ui.unit.sp
 import androidx.navigation.NavController
 import androidx.navigation.compose.rememberNavController
 import coil.compose.rememberAsyncImagePainter
+import com.example.petadoptionmanagement.R // Important: Ensure R is imported for drawables
 import com.example.petadoptionmanagement.ui.theme.PetAdoptionManagementTheme
+import com.example.petadoptionmanagement.model.UserProfile // Import UserProfile from the model package
 
-// Data class to represent user profile data
-data class UserProfile(
-    val name: String,
-    val email: String,
-    val profileImageUrl: String? = null,
-    val bio: String = "No bio provided."
-)
-
-class ProfileViewActivity : ComponentActivity() {
+class ProfileViewScreen : ComponentActivity() { // Renamed from ProfileViewActivity to ProfileViewScreen
     override fun onCreate(savedInstanceState: Bundle?) {
         super.onCreate(savedInstanceState)
         enableEdgeToEdge()
         setContent {
             PetAdoptionManagementTheme {
                 val navController = rememberNavController() // For preview/testing
-                ProfileViewScreen(navController = navController, userProfile = UserProfile(
-                    name = "Suraj Rana",
-                    email = "Admin@example.com",
-                    profileImageUrl = "https://placehold.co/100x100/FF0000/FFFFFF?text=JD" // Placeholder image URL
-                ))
+                // In a real app, you might fetch userProfile from a ViewModel
+                // or pass it via intent extras if navigating from another activity.
+                ProfileViewScreenContent(
+                    navController = navController,
+                    userProfile = UserProfile(
+                        name = "Suraj Rana",
+                        email = "Admin@example.com",
+                        profileImageUrl = "https://placehold.co/100x100/FF0000/FFFFFF?text=SR" // Placeholder image URL
+                    )
+                )
             }
         }
     }
@@ -60,7 +57,7 @@ class ProfileViewActivity : ComponentActivity() {
 
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
-fun ProfileViewScreen(navController: NavController, userProfile: UserProfile) {
+fun ProfileViewScreenContent(navController: NavController, userProfile: UserProfile) { // Renamed from ProfileViewScreen
     Scaffold(
         topBar = {
             TopAppBar(
@@ -88,8 +85,10 @@ fun ProfileViewScreen(navController: NavController, userProfile: UserProfile) {
 
             // Profile Image
             val painter = rememberAsyncImagePainter(
-                model = userProfile.profileImageUrl ?: "android.resource://com.example.petadoptionmanagement/drawable/profile_placeholder", // Fallback to local drawable
-                error = painterResource(id = R.drawable.profile_placeholder) // Corrected: R.drawable
+                // Use profileImageUrl if available, otherwise fall back to local drawable
+                model = userProfile.profileImageUrl,
+                error = painterResource(id = R.drawable.profile_placeholder), // Ensure this drawable exists
+                placeholder = painterResource(id = R.drawable.profile_placeholder) // Optional: show placeholder while loading
             )
             Image(
                 painter = painter,
@@ -133,10 +132,12 @@ fun ProfileViewScreen(navController: NavController, userProfile: UserProfile) {
 
             // Example Action Button
             Button(
-                onClick = { /* TODO: Edit Profile */ },
+                onClick = { /* TODO: Implement Edit Profile Navigation/Logic */ },
                 colors = ButtonDefaults.buttonColors(containerColor = Color(0xFF8B4513)),
                 shape = RoundedCornerShape(12.dp),
-                modifier = Modifier.fillMaxWidth(0.7f).height(50.dp)
+                modifier = Modifier
+                    .fillMaxWidth(0.7f)
+                    .height(50.dp)
             ) {
                 Text("Edit Profile", color = Color.White, fontSize = 18.sp)
             }
@@ -149,10 +150,14 @@ fun ProfileViewScreen(navController: NavController, userProfile: UserProfile) {
 fun ProfileViewScreenPreview() {
     PetAdoptionManagementTheme {
         val navController = rememberNavController()
-        ProfileViewScreen(navController = navController, userProfile = UserProfile(
-            name = "Jane Doe",
-            email = "jane.doe@example.com",
-            profileImageUrl = "https://placehold.co/100x100/0000FF/FFFFFF?text=JD"
-        ))
+        ProfileViewScreenContent(
+            navController = navController,
+            userProfile = UserProfile(
+                name = "Jane Doe",
+                email = "jane.doe@example.com",
+                bio = "Passionate pet lover and advocate for animal welfare.",
+                profileImageUrl = "https://placehold.co/100x100/0000FF/FFFFFF?text=JD"
+            )
+        )
     }
 }

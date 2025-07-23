@@ -15,7 +15,12 @@ data class UserModel(
     var lastname: String = "",
     var contact: String = "",
     var address: String = "",
-    var email: String = ""
+    var email: String = "",
+    var bio: String? = null,           // Add this line
+    var createdAt: Long = System.currentTimeMillis() // Optional: timestamp of creation
+) {
+    // No-argument constructor required for Firebase Realtime Database deserialization
+    constructor() : this("", "", "")
     // Password is not stored directly in the UserModel for security reasons
     // as Firebase Authentication handles password hashing and storage internally.
-)
+}
