@@ -43,19 +43,24 @@ import com.example.petadoptionmanagement.view.SignInScreen
 import com.example.petadoptionmanagement.view.SignUpScreen
 import com.example.petadoptionmanagement.viewmodel.UserViewModel
 import com.example.petadoptionmanagement.viewmodel.UserViewModelFactory
-import com.example.petadoptionmanagement.model.UserModel // Import UserModel
-import androidx.compose.runtime.getValue // Import for mutableStateOf
-import androidx.compose.runtime.mutableStateOf // Import for mutableStateOf
-import androidx.compose.runtime.setValue // Import for mutableStateOf
-import androidx.compose.material3.CircularProgressIndicator // For LoadingScreen
+import com.example.petadoptionmanagement.model.UserModel
+import androidx.compose.runtime.getValue
+import androidx.compose.runtime.mutableStateOf
+import androidx.compose.runtime.setValue
+import androidx.compose.material3.CircularProgressIndicator
 
 // NEW IMPORTS FOR PET MANAGEMENT
 import com.example.petadoptionmanagement.repository.PetRepositoryImpl
 import com.example.petadoptionmanagement.viewmodel.PetViewModel
 import com.example.petadoptionmanagement.viewmodel.PetViewModelFactory
-import com.example.petadoptionmanagement.view.PetDashboardScreen // Assuming this is your updated PetDashboardScreen
+import com.example.petadoptionmanagement.view.PetDashboardScreen
 import com.example.petadoptionmanagement.view.AddPetScreen
 import com.example.petadoptionmanagement.view.UpdatePetScreen
+
+// Assuming you have these composables, otherwise they need to be created
+// import com.example.petadoptionmanagement.view.SplashScreen // If you have a dedicated composable splash
+// import com.example.petadoptionmanagement.view.SignInScreen // Ensure this is a composable, not an Activity
+// import com.example.petadoptionmanagement.view.SignUpScreen // Ensure this is a composable, not an Activity
 
 
 class MainActivity : ComponentActivity() {
@@ -66,59 +71,41 @@ class MainActivity : ComponentActivity() {
             PetAdoptionManagementTheme {
                 Surface(modifier = Modifier.fillMaxSize()) {
                     val navController = rememberNavController()
-                    val context = LocalContext.current.applicationContext // Use applicationContext for ViewModel factories
+                    val context = LocalContext.current.applicationContext
 
-                    // Initialize Repositories
                     val userRepository = remember { UserRepositoryImpl(context) }
-                    val petRepository = remember { PetRepositoryImpl() } // Assuming no context needed, or pass it if required
+                    val petRepository = remember { PetRepositoryImpl() }
 
-                    // Initialize ViewModels using their Factories
                     val userViewModel: UserViewModel = viewModel(factory = UserViewModelFactory(userRepository))
                     val petViewModel: PetViewModel = viewModel(factory = PetViewModelFactory(petRepository))
 
-                    // Observe the login state from the ViewModel
-                    val isLoggedIn = userViewModel.isLoggedIn.observeAsState(initial = null) // Set initial to null for loading state
-                    val currentUser = userViewModel.currentUser.observeAsState(initial = null)
-
-                    // Flag to ensure initial navigation happens only once
-                    var initialNavigationDone by remember { mutableStateOf(false) }
-
-                    LaunchedEffect(isLoggedIn.value, initialNavigationDone) {
-                        // Navigate only if isLoggedIn state is resolved and initial navigation hasn't occurred
-                        if (!initialNavigationDone && isLoggedIn.value != null) {
-                            if (isLoggedIn.value == true) { // If initially logged in
-                                navController.navigate("home") {
-                                    popUpTo(navController.graph.id) { // Pop all destinations up to the start of the graph
-                                        inclusive = true
-                                    }
-                                }
-                            } else { // If not logged in
-                                navController.navigate("login") {
-                                    popUpTo(navController.graph.id) {
-                                        inclusive = true
-                                    }
-                                }
-                            }
-                            initialNavigationDone = true
-                        }
-                    }
+                    // Observing login state for potential re-routes if user logs out or session changes
+                    val isLoggedIn = userViewModel.isLoggedIn.observeAsState(initial = false) // Assuming initial false if not explicitly logged in
 
                     NavHost(
                         navController = navController,
-                        // Use a loading screen as the initial destination until isLoggedIn is determined
-                        startDestination = "loading"
+                        // As per your logic, Home page is the first for all users
+                        startDestination = "splash_screen" // Start with a splash screen or directly home
                     ) {
-                        // Loading Screen (simple placeholder)
-                        composable("loading") {
-                            LoadingScreen()
+                        // Splash Screen (Optional, for a short delay)
+                        composable("splash_screen") {
+                            // You can replace this with your actual splash screen composable
+                            LaunchedEffect(key1 = true) {
+                                kotlin.io.path.file.delay(2000) // 2 second delay
+                                navController.navigate("home") {
+                                    popUpTo("splash_screen") { inclusive = true } // Remove splash from back stack
+                                }
+                            }
+                            LoadingScreen() // Or your custom splash screen UI
                         }
 
-                        // Home Screen (main dashboard after login)
+                        // Home Screen (Main landing page for all users)
                         composable("home") {
+                            // HomePageScreen should have Sign In/Sign Up buttons for unauthenticated users
                             HomePageScreen(navController = navController, userViewModel = userViewModel)
                         }
 
-                        // Authentication Screens
+                        // Authentication Screens (now Composables)
                         composable("login") {
                             SignInScreen(navController = navController, userViewModel = userViewModel)
                         }
@@ -131,10 +118,8 @@ class MainActivity : ComponentActivity() {
 
                         // Pet Management Screens (for Admin)
                         composable("pet_dashboard") {
-                            // Ensure PetDashboardScreen accepts NavController and PetViewModel
                             PetDashboardScreen(navController = navController, viewModel = petViewModel)
                         }
-                        // Uncommented and Corrected Pet Management Screens
                         composable("add_pet_screen") {
                             AddPetScreen(navController = navController, petViewModel = petViewModel)
                         }
@@ -145,40 +130,31 @@ class MainActivity : ComponentActivity() {
                             UpdatePetScreen(navController = navController, petViewModel = petViewModel, petId = petId)
                         }
 
-
-                        // Main App Screens (for Users) - Pass UserViewModel directly
+                        // Main App Screens (for Users)
                         composable("contact") {
                             ContactScreen(
                                 navController = navController,
-                                userViewModel = userViewModel, // Pass ViewModel
+                                userViewModel = userViewModel,
                                 onSendMessage = { message -> /* TODO: Send message logic */ },
                                 onBackClick = { navController.popBackStack() },
                                 onViewProfile = {
-                                    // Navigate to profile view, ensure userId is available
-                                    currentUser.value?.userId?.let { userId ->
+                                    userViewModel.currentUser.value?.userId?.let { userId ->
                                         navController.navigate("profileView/$userId")
-                                    } ?: run {
-                                        // Handle case where user ID is null (e.g., show a toast)
-                                        // Toast.makeText(context, "User not loaded", Toast.LENGTH_SHORT).show()
                                     }
-                                },
-                                // Removed userModel directly, ContactScreen should observe it internally
+                                }
                             )
                         }
 
                         composable("consult") {
                             ConsultScreen(
                                 navController = navController,
-                                userViewModel = userViewModel, // Pass ViewModel
+                                userViewModel = userViewModel,
                                 onBackClick = { navController.popBackStack() },
                                 onViewProfile = {
-                                    currentUser.value?.userId?.let { userId ->
+                                    userViewModel.currentUser.value?.userId?.let { userId ->
                                         navController.navigate("profileView/$userId")
-                                    } ?: run {
-                                        // Handle case where user ID is null
                                     }
-                                },
-                                // Removed userModel directly
+                                }
                             )
                         }
 
@@ -189,21 +165,18 @@ class MainActivity : ComponentActivity() {
                             val petId = backStackEntry.arguments?.getString("petId") ?: "default_pet_id"
                             AdoptionScreen(
                                 navController = navController,
-                                userViewModel = userViewModel, // Pass ViewModel
+                                userViewModel = userViewModel,
                                 petId = petId,
                                 onBackClick = { navController.popBackStack() },
                                 onContactClick = { navController.navigate("contact") },
-                                onAdoptClick = { petName -> /* TODO: Adoption logic */ },
-                                // Removed userModel directly
+                                onAdoptClick = { petName -> /* TODO: Adoption logic */ }
                             )
                         }
 
-                        // About Page
                         composable("about") {
                             AboutScreen(navController = navController)
                         }
 
-                        // Profile View Screen (receives userId argument)
                         composable(
                             "profileView/{userId}",
                             arguments = listOf(navArgument("userId") { type = NavType.StringType })
@@ -211,9 +184,8 @@ class MainActivity : ComponentActivity() {
                             val userId = backStackEntry.arguments?.getString("userId") ?: "default_user_id"
                             ProfileViewScreen(
                                 navController = navController,
-                                userViewModel = userViewModel, // Pass ViewModel
-                                userId = userId,
-                                // Removed userModel directly
+                                userViewModel = userViewModel,
+                                userId = userId
                             )
                         }
                     }
@@ -223,7 +195,6 @@ class MainActivity : ComponentActivity() {
     }
 }
 
-// --- Placeholder Composable for About Page ---
 @Composable
 fun AboutScreen(navController: NavController) {
     Surface(color = MaterialTheme.colorScheme.background) {
@@ -245,7 +216,6 @@ fun AboutScreen(navController: NavController) {
     }
 }
 
-// --- Placeholder for a simple Loading Screen ---
 @Composable
 fun LoadingScreen() {
     Column(
