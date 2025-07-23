@@ -35,8 +35,9 @@ import androidx.navigation.compose.rememberNavController
 import coil.compose.rememberAsyncImagePainter
 import com.example.petadoptionmanagement.R
 import com.example.petadoptionmanagement.ui.theme.PetAdoptionManagementTheme
+import com.example.petadoptionmanagement.model.UserProfile // IMPORTED UserProfile
 
-// Data class to represent a Doctor
+// Data class to represent a Doctor (keeping it here for now as it's specific to this screen)
 data class Doctor(
     val id: Int,
     val name: String,
@@ -47,8 +48,9 @@ data class Doctor(
 
 // Placeholder for user authentication state (reusing from ContactActivity)
 // In a real app, these would be managed in a shared ViewModel or AuthManager
+// For a smoother flow, these would typically come from a ViewModel observing the UserRepository
 var isLoggedInConsult = mutableStateOf(true) // Simulating logged-in state for demo
-var currentUserProfileConsult = mutableStateOf(UserProfile( // Reusing UserProfile data class
+var currentUserProfileConsult = mutableStateOf(UserProfile(
     name = "Demo User",
     email = "demo@example.com",
     profileImageUrl = "https://placehold.co/100x100/007BFF/FFFFFF?text=DU" // Placeholder profile image URL
@@ -66,17 +68,17 @@ class ConsultActivity : ComponentActivity() {
 
                 ConsultScreen(
                     navController = navController,
-                    onBackClick = { finish() }, // Go back to previous screen/activity
+                    onBackClick = { finish() },
                     onLogout = {
                         isLoggedInConsult.value = false
                         Toast.makeText(activityContext, "Logged out!", Toast.LENGTH_SHORT).show()
-                        val intent = Intent(activityContext, SignInActivity::class.java)
+                        val intent = Intent(activityContext, SignInActivity::class.java) // Corrected class reference
                         intent.flags = Intent.FLAG_ACTIVITY_CLEAR_TOP or Intent.FLAG_ACTIVITY_NEW_TASK
                         startActivity(intent)
                         finish()
                     },
                     onViewProfile = {
-                        val intent = Intent(activityContext, ProfileViewActivity::class.java)
+                        val intent = Intent(activityContext, ProfileViewScreen::class.java) // Corrected class reference
                         startActivity(intent)
                     },
                     userProfile = currentUserProfileConsult.value,
@@ -98,12 +100,11 @@ fun ConsultScreen(
     isLoggedIn: Boolean
 ) {
     val context = LocalContext.current
-    var showMenu by remember { mutableStateOf(false) } // State for dropdown menu
+    var showMenu by remember { mutableStateOf(false) }
 
-    // Sample data for doctors
     val doctors = remember {
         listOf(
-            Doctor(1, "Dr. Siddhartha", "5 yrs", "Clinic in vet hospital", R.drawable.profile_placeholder), // Make sure you have these drawables
+            Doctor(1, "Dr. Siddhartha", "5 yrs", "Clinic in vet hospital", R.drawable.profile_placeholder),
             Doctor(2, "Dr. Sahin", "10 yrs", "Clinic in vet hospital", R.drawable.profile_placeholder),
             Doctor(3, "Dr. Sunam", "3 yrs", "Clinic in vet hospital", R.drawable.profile_placeholder),
             Doctor(4, "Dr. Rahil", "6 yrs", "Clinic in vet hospital", R.drawable.profile_placeholder)
@@ -182,7 +183,7 @@ fun ConsultScreen(
                                     text = { Text("Login", color = Color.Black) },
                                     onClick = {
                                         showMenu = false
-                                        val intent = Intent(context, SignInActivity::class.java)
+                                        val intent = Intent(context, SignInActivity::class.java) // Correct class reference
                                         context.startActivity(intent)
                                     }
                                 )
@@ -190,7 +191,7 @@ fun ConsultScreen(
                                     text = { Text("Sign Up", color = Color.Black) },
                                     onClick = {
                                         showMenu = false
-                                        val intent = Intent(context, SignUpActivity::class.java)
+                                        val intent = Intent(context, SignUpActivity::class.java) // Correct class reference
                                         context.startActivity(intent)
                                     }
                                 )
@@ -198,10 +199,10 @@ fun ConsultScreen(
                         }
                     }
                 },
-                colors = TopAppBarDefaults.topAppBarColors(containerColor = Color(0xFF6B8E23), titleContentColor = Color.White) // Green header
+                colors = TopAppBarDefaults.topAppBarColors(containerColor = Color(0xFF6B8E23), titleContentColor = Color.White)
             )
         },
-        containerColor = Color(0xFF6B8E23) // Green background for the whole screen
+        containerColor = Color(0xFF6B8E23)
     ) { innerPadding ->
         Column(
             modifier = Modifier
@@ -209,23 +210,20 @@ fun ConsultScreen(
                 .padding(innerPadding)
                 .padding(horizontal = 16.dp, vertical = 8.dp),
             horizontalAlignment = Alignment.CenterHorizontally,
-            verticalArrangement = Arrangement.SpaceBetween // Distribute content
+            verticalArrangement = Arrangement.SpaceBetween
         ) {
-            // Doctors List
             LazyColumn(
-                modifier = Modifier.weight(1f), // Takes available space
-                verticalArrangement = Arrangement.spacedBy(16.dp), // Spacing between cards
+                modifier = Modifier.weight(1f),
+                verticalArrangement = Arrangement.spacedBy(16.dp),
                 contentPadding = PaddingValues(vertical = 16.dp)
             ) {
                 items(doctors) { doctor ->
                     DoctorCard(doctor = doctor) {
-                        // Handle doctor card click, e.g., navigate to doctor's detail page or booking
                         Toast.makeText(context, "Clicked on ${doctor.name}", Toast.LENGTH_SHORT).show()
                     }
                 }
             }
 
-            // Pagination (1 2 3 .... ->)
             Row(
                 modifier = Modifier
                     .fillMaxWidth()
@@ -242,39 +240,38 @@ fun ConsultScreen(
                 )
                 Text(
                     text = "2",
-                    color = Color.White.copy(alpha = 0.7f), // Faded
+                    color = Color.White.copy(alpha = 0.7f),
                     fontSize = 18.sp,
                     modifier = Modifier.padding(horizontal = 8.dp)
                 )
                 Text(
                     text = "3",
-                    color = Color.White.copy(alpha = 0.7f), // Faded
+                    color = Color.White.copy(alpha = 0.7f),
                     fontSize = 18.sp,
                     modifier = Modifier.padding(horizontal = 8.dp)
                 )
                 Text(
                     text = "....",
-                    color = Color.White.copy(alpha = 0.7f), // Faded
+                    color = Color.White.copy(alpha = 0.7f),
                     fontSize = 18.sp,
                     modifier = Modifier.padding(horizontal = 8.dp)
                 )
                 Icon(
-                    painter = painterResource(id = R.drawable.baseline_arrow_forward_ios_24), // You'll need this drawable for the arrow
+                    painter = painterResource(id = R.drawable.baseline_arrow_forward_ios_24), // Ensure this drawable exists
                     contentDescription = "Next Page",
                     tint = Color.White,
                     modifier = Modifier.size(24.dp)
                 )
             }
 
-            // Cancel Button
             Button(
-                onClick = { navController.popBackStack() }, // Go back
+                onClick = { navController.popBackStack() },
                 modifier = Modifier
-                    .fillMaxWidth(0.6f) // Wider button
+                    .fillMaxWidth(0.6f)
                     .height(50.dp)
-                    .padding(bottom = 16.dp), // Padding from bottom
+                    .padding(bottom = 16.dp),
                 shape = RoundedCornerShape(12.dp),
-                colors = ButtonDefaults.buttonColors(containerColor = Color(0xFF8B4513)) // Earthy brown
+                colors = ButtonDefaults.buttonColors(containerColor = Color(0xFF8B4513))
             ) {
                 Text("Cancel", fontSize = 18.sp, color = Color.White, fontWeight = FontWeight.SemiBold)
             }
@@ -289,9 +286,9 @@ fun DoctorCard(doctor: Doctor, onClick: () -> Unit) {
         shape = RoundedCornerShape(20.dp),
         modifier = Modifier
             .fillMaxWidth()
-            .height(120.dp) // Fixed height for card
+            .height(120.dp)
             .clickable(onClick = onClick),
-        colors = CardDefaults.elevatedCardColors(containerColor = Color(0xFFDCDCDC)), // Light grey card
+        colors = CardDefaults.elevatedCardColors(containerColor = Color(0xFFDCDCDC)),
         elevation = CardDefaults.cardElevation(defaultElevation = 6.dp)
     ) {
         Row(
@@ -301,20 +298,18 @@ fun DoctorCard(doctor: Doctor, onClick: () -> Unit) {
             verticalAlignment = Alignment.CenterVertically,
             horizontalArrangement = Arrangement.spacedBy(16.dp)
         ) {
-            // Doctor Image
             Image(
-                painter = painterResource(id = doctor.imageRes), // Using local drawable
+                painter = painterResource(id = doctor.imageRes),
                 contentDescription = doctor.name,
                 contentScale = ContentScale.Crop,
                 modifier = Modifier
-                    .size(80.dp) // Size of doctor image
-                    .clip(RoundedCornerShape(16.dp)) // Square with rounded corners
-                    .background(Color.Gray) // Placeholder background
+                    .size(80.dp)
+                    .clip(RoundedCornerShape(16.dp))
+                    .background(Color.Gray)
             )
 
-            // Doctor Details
             Column(
-                modifier = Modifier.weight(1f) // Text takes remaining space
+                modifier = Modifier.weight(1f)
             ) {
                 Text(
                     text = doctor.name,

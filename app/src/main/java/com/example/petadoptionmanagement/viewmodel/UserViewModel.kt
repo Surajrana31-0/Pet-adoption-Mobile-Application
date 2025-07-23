@@ -7,6 +7,7 @@ import androidx.lifecycle.ViewModelProvider
 import com.example.petadoptionmanagement.model.UserModel
 import com.example.petadoptionmanagement.repository.PetRepository
 import com.example.petadoptionmanagement.repository.UserRepository
+import com.google.firebase.auth.FirebaseUser
 
 /**
  * ViewModel for user authentication and profile management.
@@ -120,6 +121,55 @@ class UserViewModel(private val userRepository: UserRepository) : ViewModel() {
             callback(success, msg)
         }
     }
+
+    fun deleteAccount(userId: String, callback: (Boolean, String) -> Unit){
+        userRepository.deleteAccount(userId,callback)
+    }
+
+    fun addUserToDatabase(
+        userId: String, model: UserModel,
+        callback: (Boolean, String) -> Unit
+    ){
+        userRepository.addUserToDatabase(userId,model,callback)
+    }
+
+    fun getCurrentUser(): FirebaseUser?{
+        return userRepository.getCurrentUser()
+    }
+
+
+    fun logOut(
+        callback: (Boolean, String) -> Unit){
+        userRepository.signOut(callback) // Changed to signOut to match the existing logout function name in UserRepository
+    }
+
+
+    fun editProfile(
+        userId: String,
+        data: MutableMap<String, Any?>,
+        callback: (Boolean, String) -> Unit
+    ){
+        userRepository.editProfile(userId,data,callback)
+    }
+
+    private val _users = MutableLiveData<UserModel?>()
+    val users : LiveData<UserModel?> get() = _users
+
+    fun getUserFromDatabase(
+        userId: String,
+        callback: (Boolean, String, UserModel?) -> Unit
+    ){
+        userRepository.getUserFromDatabase(userId){
+                success,message,users ->
+            if(success){
+                _users.postValue(users)
+            }else{
+                _users.postValue(null)
+            }
+            callback(success, message, users) // Added callback here to propagate the result to the UI
+        }
+    }
+
 
     /**
      * Clears the current message. Call this after a message has been displayed in the UI.

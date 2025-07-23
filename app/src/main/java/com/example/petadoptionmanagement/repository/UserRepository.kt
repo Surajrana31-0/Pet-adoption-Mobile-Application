@@ -46,26 +46,52 @@ interface UserRepository {
      */
     fun signOut(callback: (Boolean, String) -> Unit)
 
+    /**
+     * Adds or updates a user's profile data in the Realtime Database.
+     *
+     * @param userId The unique ID of the user.
+     * @param model The UserModel object containing the user's data.
+     * @param callback A lambda function to be called upon completion,
+     * indicating success/failure and a descriptive message.
+     */
     fun addUserToDatabase(
         userId: String, model: UserModel,
         callback: (Boolean, String) -> Unit
-
     )
 
+    /**
+     * Sends a password reset email to the specified email address.
+     *
+     * @param email The email address to send the reset link to.
+     * @param callback A lambda function to be called upon completion,
+     * indicating success/failure and a descriptive message.
+     */
     fun forgetPassword(email: String, callback: (Boolean, String) -> Unit)
 
+    /**
+     * Synchronously retrieves the current FirebaseUser object.
+     * Note: For observing changes, use `observeAuthState`.
+     *
+     * @return The current FirebaseUser, or null if no user is logged in.
+     */
     fun getCurrentUser(): FirebaseUser?
 
+    /**
+     * Retrieves a user model from the Realtime Database by user ID.
+     *
+     * @param userId The unique ID of the user to retrieve.
+     * @param callback A lambda function to be called upon completion,
+     * indicating success/failure, a descriptive message, and the retrieved UserModel (if successful).
+     */
     fun getUserFromDatabase(
         userId: String,
         callback: (Boolean, String, UserModel?) -> Unit
     )
 
-
     /**
-     * Retrieves the currently logged-in user's data.
+     * Asynchronously retrieves the currently logged-in user's data from the database.
      *
-     * @param callback A lambda function that returns the UserModel if a user is logged in, null otherwise.
+     * @param callback A lambda function that returns the UserModel if a user is logged in and their data is found, null otherwise.
      */
     fun getCurrentUser(callback: (UserModel?) -> Unit)
 
@@ -78,7 +104,26 @@ interface UserRepository {
      */
     fun observeAuthState(callback: (Boolean, UserModel?) -> Unit)
 
+    /**
+     * Deletes the user's account from Firebase Authentication and their data from Realtime Database.
+     *
+     * @param userId The ID of the user to delete.
+     * @param callback A lambda function to be called upon completion,
+     * indicating success/failure and a descriptive message.
+     */
+    fun deleteAccount(userId: String, callback: (Boolean, String) -> Unit)
 
+    /**
+     * Updates specific fields of a user's profile in the Realtime Database.
+     *
+     * @param userId The ID of the user whose profile is to be updated.
+     * @param data A map containing the fields to update and their new values.
+     * @param callback A lambda function to be called upon completion,
+     * indicating success/failure and a descriptive message.
+     */
+    fun editProfile(
+        userId: String,
+        data: MutableMap<String, Any?>,
+        callback: (Boolean, String) -> Unit
+    )
 }
-
-
