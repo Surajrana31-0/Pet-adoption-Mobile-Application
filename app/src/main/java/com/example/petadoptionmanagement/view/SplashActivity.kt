@@ -1,7 +1,5 @@
 package com.example.petadoptionmanagement.view
 
-import android.app.Activity
-import android.content.Context
 import android.content.Intent
 import android.os.Bundle
 import androidx.activity.ComponentActivity
@@ -21,6 +19,7 @@ import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.res.painterResource
 import androidx.compose.ui.unit.dp
 import com.example.petadoptionmanagement.R
+import com.example.petadoptionmanagement.ui.theme.PetAdoptionManagementTheme
 import kotlinx.coroutines.delay
 
 class SplashActivity : ComponentActivity() {
@@ -28,30 +27,26 @@ class SplashActivity : ComponentActivity() {
         super.onCreate(savedInstanceState)
         enableEdgeToEdge()
         setContent {
-            SplashScreenBody()
+            PetAdoptionManagementTheme {
+                // Pass the single navigation action: always go to HomePage
+                SplashToHomeContent(
+                    onNavigationFinished = {
+                        startActivity(Intent(this, HomePage::class.java))
+                        finish() // Finish SplashActivity so user can't go back
+                    }
+                )
+            }
         }
     }
 }
 
 @Composable
-fun SplashScreenBody() {
-    val context = LocalContext.current
-    val activity = context as Activity
-
-    val sharedPreferences = context.getSharedPreferences("User", Context.MODE_PRIVATE)
-    val localEmail: String? = sharedPreferences.getString("email", "")
-
+fun SplashToHomeContent(
+    onNavigationFinished: () -> Unit // Callback when splash delay is over
+) {
     LaunchedEffect(Unit) {
-        delay(2500)
-        if (localEmail.isNullOrEmpty()) {
-            val intent = Intent(context, SignInActivity::class.java)
-            context.startActivity(intent)
-            activity.finish()
-        } else {
-            val intent = Intent(context, HomePage::class.java)
-            context.startActivity(intent)
-            activity.finish()
-        }
+        delay(2500) // Keep your splash screen delay
+        onNavigationFinished() // Trigger navigation
     }
 
     Scaffold(
@@ -65,7 +60,7 @@ fun SplashScreenBody() {
             verticalArrangement = Arrangement.Center,
             horizontalAlignment = Alignment.CenterHorizontally
         ) {
-            // Replace with your logo or splash image
+            // Your app logo/splash image
             Image(
                 painter = painterResource(id = R.drawable.hero_pet), // Use your splash/logo image!
                 contentDescription = null,

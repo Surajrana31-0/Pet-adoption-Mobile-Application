@@ -1,5 +1,6 @@
 package com.example.petadoptionmanagement.view
 
+import android.content.Intent
 import android.os.Bundle
 import android.widget.Toast
 import androidx.activity.ComponentActivity
@@ -13,10 +14,11 @@ import androidx.compose.foundation.shape.CircleShape
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.filled.Menu
-import androidx.compose.material.icons.filled.Visibility // Import for eye icon
-import androidx.compose.material.icons.filled.VisibilityOff // Import for eye-off icon
+import androidx.compose.material.icons.filled.Visibility
+import androidx.compose.material.icons.filled.VisibilityOff
 import androidx.compose.material3.*
 import androidx.compose.runtime.*
+import androidx.compose.runtime.livedata.observeAsState
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
@@ -27,13 +29,17 @@ import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.res.painterResource
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.input.PasswordVisualTransformation
-import androidx.compose.ui.text.input.VisualTransformation // Import VisualTransformation
+import androidx.compose.ui.text.input.VisualTransformation
 import androidx.compose.ui.text.style.TextDecoration
 import androidx.compose.ui.tooling.preview.Preview
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
-import com.example.petadoptionmanagement.R // Make sure R is imported for drawables
+import androidx.lifecycle.viewmodel.compose.viewModel
+import com.example.petadoptionmanagement.R
+import com.example.petadoptionmanagement.repository.UserRepositoryImpl
 import com.example.petadoptionmanagement.ui.theme.PetAdoptionManagementTheme
+import com.example.petadoptionmanagement.viewmodel.UserViewModel
+import com.example.petadoptionmanagement.viewmodel.UserViewModelFactory // Import the factory
 
 class SignInActivity : ComponentActivity() {
     override fun onCreate(savedInstanceState: Bundle?) {
@@ -41,26 +47,11 @@ class SignInActivity : ComponentActivity() {
         enableEdgeToEdge()
         setContent {
             PetAdoptionManagementTheme {
-                // Here, in your Activity, you define what happens when the callbacks are triggered.
-                // In a real application, you would use a Navigation Component (e.g., NavController)
-                // to navigate between screens instead of just showing Toasts.
-                SignInScreen(
-                    onSignInSuccess = {
-                        // This lambda is called when the sign-in button is clicked and validation passes.
-                        Toast.makeText(this, "Sign In Successful! Navigating to Home Screen.", Toast.LENGTH_SHORT).show()
-                        // Example of real navigation: findNavController().navigate(R.id.action_signIn_to_home)
-                    },
-                    onSignUpClick = {
-                        // This lambda is called when the "sign up" text is clicked.
-                        Toast.makeText(this, "Navigating to Sign Up Screen.", Toast.LENGTH_SHORT).show()
-                        // Example of real navigation: findNavController().navigate(R.id.action_signIn_to_signUp)
-                    },
-                    onMenuClick = {
-                        // This lambda is called when the menu icon is clicked.
-                        Toast.makeText(this, "Menu icon clicked!", Toast.LENGTH_SHORT).show()
-                        // You might open a drawer or show a pop-up menu here.
-                    }
-                )
+                // Initialize UserRepository and UserViewModelFactory
+                val userRepository = remember { UserRepositoryImpl(applicationContext) }
+                val userViewModel: UserViewModel = viewModel(factory = UserViewModelFactory(userRepository))
+
+                SignInScreen(userViewModel = userViewModel)
             }
         }
     }
@@ -68,23 +59,21 @@ class SignInActivity : ComponentActivity() {
 
 /**
  * Composable function for the Sign In screen UI.
- * It takes callback functions as parameters to handle user interactions,
- * allowing the parent (Activity or another Composable) to define the actions.
+ * It now takes the UserViewModel as a parameter to handle authentication logic.
  *
- * @param onSignInSuccess Callback invoked upon successful sign-in (after validation).
- * @param onSignUpClick Callback invoked when the "sign up" text is clicked.
- * @param onMenuClick Callback invoked when the menu icon is clicked.
+ * @param userViewModel The ViewModel instance for user authentication and management.
  */
 @Composable
-fun SignInScreen(
-    onSignInSuccess: () -> Unit,
-    onSignUpClick: () -> Unit,
-    onMenuClick: () -> Unit
-) {
-    val context = LocalContext.current // Get the current Android context for Toast messages
-    var email by remember { mutableStateOf("") } // State for the email input field
-    var password by remember { mutableStateOf("") } // State for the password input field
-    var passwordVisible by remember { mutableStateOf(false) } // State to toggle password visibility
+fun SignInScreen(userViewModel: UserViewModel) {
+    val context = LocalContext.current
+    var email by remember { mutableStateOf("") }
+    var password by remember { mutableStateOf("") }
+    var passwordVisible by remember { mutableStateOf(false) }
+
+    // Observe LiveData from the UserViewModel
+    val isLoggedIn by userViewModel.isLoggedIn.observeAsState(initial = userViewModel.isLoggedIn.value ?: false)
+    val isLoading by userViewModel.isLoading.observeAsState(initial = userViewModel.isLoading.value ?: false)
+    val message by userViewModel.message.observeAsState(initial = userViewModel.message.value ?: "")
 
     // Define custom colors to match the image
     val backgroundColor = Color(0xFF6B8E23) // Olive green background
@@ -92,99 +81,113 @@ fun SignInScreen(
     val buttonColor = Color(0xFF8B4513) // Reddish-brown for the Sign In button
     val textFieldBackgroundColor = Color(0xFFFFFFFF) // White for input fields
 
+    // Effect for handling navigation after successful sign-in
+    LaunchedEffect(isLoggedIn) {
+        if (isLoggedIn) {
+            // Navigate to the main application screen (e.g., MainActivity or HomePage)
+            // Replace MainActivity::class.java with your actual main activity class if different
+            val intent = Intent(context, MainActivity::class.java)
+            intent.flags = Intent.FLAG_ACTIVITY_NEW_TASK or Intent.FLAG_ACTIVITY_CLEAR_TASK // Clear back stack
+            context.startActivity(intent)
+            (context as? ComponentActivity)?.finish() // Finish SignInActivity
+        }
+    }
+
+    // Effect for displaying messages (success/failure)
+    LaunchedEffect(message) {
+        if (message.isNotBlank()) {
+            Toast.makeText(context, message, Toast.LENGTH_SHORT).show()
+            // Optionally clear the message after showing
+            // userViewModel.clearMessage() // You might add a clearMessage() function in ViewModel
+        }
+    }
+
     Box(
         modifier = Modifier
-            .fillMaxSize() // Occupy the entire screen
-            .background(backgroundColor), // Set the main background color
-        contentAlignment = Alignment.Center // Center the content within the Box (specifically the Card)
+            .fillMaxSize()
+            .background(backgroundColor),
+        contentAlignment = Alignment.Center
     ) {
         // Top section with decorative elements: paw print icon, menu icon, and dog image
         Column(
             modifier = Modifier
                 .fillMaxWidth()
-                .padding(top = 24.dp) // Padding from the top of the screen
-                .align(Alignment.TopCenter), // Align this column to the top center of the parent Box
-            horizontalAlignment = Alignment.CenterHorizontally // Center content horizontally within this column
+                .padding(top = 24.dp)
+                .align(Alignment.TopCenter),
+            horizontalAlignment = Alignment.CenterHorizontally
         ) {
-            // Header Row for the paw print icon and menu icon
             Row(
                 modifier = Modifier
                     .fillMaxWidth()
-                    .padding(horizontal = 24.dp), // Horizontal padding for the row
-                horizontalArrangement = Arrangement.SpaceBetween, // Space items evenly
-                verticalAlignment = Alignment.CenterVertically // Vertically align items in the row
+                    .padding(horizontal = 24.dp),
+                horizontalArrangement = Arrangement.SpaceBetween,
+                verticalAlignment = Alignment.CenterVertically
             ) {
-                // Paw Print Icon
-                // IMPORTANT: Ensure you have 'ic_paw_print.png' in your res/drawable folder.
                 Image(
                     painter = painterResource(id = R.drawable.paw_print),
                     contentDescription = "Paw Print Icon",
-                    modifier = Modifier.size(48.dp) // Size of the icon
+                    modifier = Modifier.size(48.dp)
                 )
-                // Menu Icon with clickable behavior
                 Icon(
-                    imageVector = Icons.Default.Menu, // Using Material Icons for the menu
+                    imageVector = Icons.Default.Menu,
                     contentDescription = "Menu Icon",
-                    tint = Color.White, // Set icon color to white
+                    tint = Color.White,
                     modifier = Modifier
-                        .size(36.dp) // Size of the icon
-                        .clickable { onMenuClick() } // Attach the onMenuClick callback here
+                        .size(36.dp)
+                        .clickable {
+                            // This will still show a Toast as per your original UI
+                            Toast.makeText(context, "Menu icon clicked!", Toast.LENGTH_SHORT).show()
+                        }
                 )
             }
-            Spacer(modifier = Modifier.height(20.dp)) // Space between header row and dog image
+            Spacer(modifier = Modifier.height(20.dp))
 
-            // Dog Image with a circular gradient background
-            // IMPORTANT: Ensure you have 'dog_image.png' in your res/drawable folder.
             Box(
                 modifier = Modifier
-                    .size(250.dp) // Size of the circular container for the image
-                    .clip(CircleShape) // Clip the Box to a circular shape
+                    .size(250.dp)
+                    .clip(CircleShape)
                     .background(
-                        Brush.verticalGradient( // Apply a vertical gradient background
-                            colors = listOf(Color(0xFF8B0000), Color(0xFFD3D3D3)), // Dark red to light grey
+                        Brush.verticalGradient(
+                            colors = listOf(Color(0xFF8B0000), Color(0xFFD3D3D3)),
                             startY = 0f,
                             endY = 250f
                         )
                     ),
-                contentAlignment = Alignment.BottomCenter // Align the image to the bottom of the circle
+                contentAlignment = Alignment.BottomCenter
             ) {
                 Image(
                     painter = painterResource(id = R.drawable.dog_image),
                     contentDescription = "Dog looking up",
-                    contentScale = ContentScale.Crop, // Crop the image to fit the bounds
+                    contentScale = ContentScale.Crop,
                     modifier = Modifier
-                        .fillMaxWidth() // Fill the width of the circular container (250.dp)
-                        .height(200.dp) // Set a fixed height for the image within the circular container
+                        .fillMaxWidth()
+                        .height(200.dp)
                 )
             }
         }
 
         // Login Form Card
         Card(
-            shape = RoundedCornerShape(24.dp), // Rounded corners for the card
+            shape = RoundedCornerShape(24.dp),
             modifier = Modifier
-                .fillMaxWidth(0.9f) // Card takes 90% of the screen width
-                .align(Alignment.Center) // Center the card within the parent Box
-                .offset(y = 120.dp), // Adjust this 'y' offset value to move the card further down
-            // Increase 'y' to move down, decrease to move up.
-            colors = CardDefaults.cardColors(containerColor = cardBackgroundColor), // Set card background color
-            elevation = CardDefaults.cardElevation(defaultElevation = 8.dp) // Add elevation for a raised effect
+                .fillMaxWidth(0.9f)
+                .align(Alignment.Center)
+                .offset(y = 120.dp),
+            colors = CardDefaults.cardColors(containerColor = cardBackgroundColor),
+            elevation = CardDefaults.cardElevation(defaultElevation = 8.dp)
         ) {
             Column(
-                modifier = Modifier
-                    .padding(32.dp), // Padding inside the card
-                horizontalAlignment = Alignment.CenterHorizontally // Center content horizontally within the card
+                modifier = Modifier.padding(32.dp),
+                horizontalAlignment = Alignment.CenterHorizontally
             ) {
-                // "Log In" Title
                 Text(
                     "Log In",
-                    fontSize = 32.sp, // Font size for the title
-                    fontWeight = FontWeight.Bold, // Bold font weight
-                    color = Color.Black // Black text color
+                    fontSize = 32.sp,
+                    fontWeight = FontWeight.Bold,
+                    color = Color.Black
                 )
-                Spacer(modifier = Modifier.height(30.dp)) // Vertical space
+                Spacer(modifier = Modifier.height(30.dp))
 
-                // Email Input Field
                 TextField(
                     value = email,
                     onValueChange = { email = it },
@@ -204,13 +207,11 @@ fun SignInScreen(
                 )
                 Spacer(modifier = Modifier.height(18.dp))
 
-                // Password Input Field with Eye Button
                 TextField(
                     value = password,
                     onValueChange = { password = it },
                     label = { Text("Password", color = Color.Gray) },
                     singleLine = true,
-                    // Conditional visualTransformation based on passwordVisible state
                     visualTransformation = if (passwordVisible) VisualTransformation.None else PasswordVisualTransformation(),
                     colors = TextFieldDefaults.colors(
                         focusedContainerColor = textFieldBackgroundColor,
@@ -223,15 +224,9 @@ fun SignInScreen(
                     ),
                     shape = RoundedCornerShape(12.dp),
                     modifier = Modifier.fillMaxWidth(),
-                    // Trailing icon for password visibility toggle
                     trailingIcon = {
-                        val image = if (passwordVisible)
-                            Icons.Filled.Visibility
-                        else Icons.Filled.VisibilityOff
-
-                        // Add a content description for accessibility
+                        val image = if (passwordVisible) Icons.Filled.Visibility else Icons.Filled.VisibilityOff
                         val description = if (passwordVisible) "Hide password" else "Show password"
-
                         IconButton(onClick = { passwordVisible = !passwordVisible }) {
                             Icon(imageVector = image, contentDescription = description)
                         }
@@ -239,55 +234,57 @@ fun SignInScreen(
                 )
                 Spacer(modifier = Modifier.height(30.dp))
 
-                // Sign In Button
                 Button(
                     onClick = {
-                        // Logic executed when the button is clicked
                         if (email.isBlank() || password.isBlank()) {
                             Toast.makeText(context, "Please fill all fields.", Toast.LENGTH_SHORT).show()
                         } else {
-                            // If validation passes, invoke the onSignInSuccess callback
-                            // This is where you'd typically call your authentication logic (e.g., API call)
-                            // After successful authentication, you'd trigger the navigation.
-                            onSignInSuccess()
+                            userViewModel.signIn(email, password) { success, msg ->
+                                // The LaunchedEffect for 'message' and 'isLoggedIn' will handle feedback and navigation.
+                                // No need for direct Toast or navigation here.
+                            }
                         }
                     },
                     modifier = Modifier
-                        .fillMaxWidth() // Button fills width
-                        .height(55.dp), // Set button height
-                    shape = RoundedCornerShape(16.dp), // Rounded corners for the button
-                    colors = ButtonDefaults.buttonColors(containerColor = buttonColor) // Custom button background color
+                        .fillMaxWidth()
+                        .height(55.dp),
+                    shape = RoundedCornerShape(16.dp),
+                    colors = ButtonDefaults.buttonColors(containerColor = buttonColor),
+                    enabled = !isLoading // Disable button while loading
                 ) {
-                    Text(
-                        "Sign in",
-                        fontSize = 20.sp,
-                        fontWeight = FontWeight.SemiBold,
-                        color = Color.White // White text on the button
-                    )
+                    if (isLoading) {
+                        CircularProgressIndicator(color = Color.White, modifier = Modifier.size(24.dp))
+                    } else {
+                        Text(
+                            "Sign in",
+                            fontSize = 20.sp,
+                            fontWeight = FontWeight.SemiBold,
+                            color = Color.White
+                        )
+                    }
                 }
                 Spacer(modifier = Modifier.height(16.dp))
 
-                // "No account? sign up" section
                 Row(
-                    horizontalArrangement = Arrangement.Center, // Center items horizontally
-                    verticalAlignment = Alignment.CenterVertically // Vertically align items
+                    horizontalArrangement = Arrangement.Center,
+                    verticalAlignment = Alignment.CenterVertically
                 ) {
                     Text(
                         "No account?",
-                        color = Color.DarkGray, // Dark gray text color
+                        color = Color.DarkGray,
                         fontSize = 16.sp
                     )
-                    Spacer(modifier = Modifier.width(4.dp)) // Small horizontal space
-                    // "sign up" TextButton with clickable behavior
+                    Spacer(modifier = Modifier.width(4.dp))
                     TextButton(onClick = {
-                        onSignUpClick() // Invoke the onSignUpClick callback
+                        // Navigate to SignUpActivity
+                        context.startActivity(Intent(context, SignUpActivity::class.java))
                     }) {
                         Text(
                             "sign up",
-                            color = Color(0xFF8B4513), // Color matching the button
-                            fontWeight = FontWeight.SemiBold, // Semi-bold font weight
+                            color = Color(0xFF8B4513),
+                            fontWeight = FontWeight.SemiBold,
                             fontSize = 16.sp,
-                            textDecoration = TextDecoration.Underline // Underline the text
+                            textDecoration = TextDecoration.Underline
                         )
                     }
                 }
@@ -298,17 +295,18 @@ fun SignInScreen(
 
 /**
  * Preview function for the SignInScreen.
- * Callbacks are provided as empty lambdas for preview purposes, as actual navigation
- * or Toast messages cannot be performed in the preview environment.
+ * Note: ViewModel is mocked or not used directly in previews.
  */
 @Preview(showBackground = true)
 @Composable
 fun SignInPreview() {
     PetAdoptionManagementTheme {
-        SignInScreen(
-            onSignInSuccess = { /* No action in preview */ },
-            onSignUpClick = { /* No action in preview */ },
-            onMenuClick = { /* No action in preview */ }
-        )
+        // For preview, you'd typically pass a mock ViewModel or handle states manually.
+        // For simplicity, we'll create a dummy ViewModel here. In a real app,
+        // you might use a Hilt preview setup or similar.
+        val context = LocalContext.current
+        val userRepository = remember { UserRepositoryImpl(context) }
+        val userViewModel = remember { UserViewModel(userRepository) }
+        SignInScreen(userViewModel = userViewModel)
     }
 }

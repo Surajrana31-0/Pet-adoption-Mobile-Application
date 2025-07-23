@@ -1,12 +1,6 @@
 package com.example.petadoptionmanagement.view
 
-import android.app.Activity
-import android.os.Bundle
 import android.widget.Toast
-import androidx.activity.ComponentActivity
-import androidx.activity.compose.setContent
-import androidx.activity.enableEdgeToEdge
-import androidx.compose.foundation.background
 import androidx.compose.foundation.clickable
 import androidx.compose.foundation.layout.*
 import androidx.compose.foundation.lazy.LazyColumn
@@ -15,62 +9,68 @@ import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.automirrored.filled.ArrowBack
 import androidx.compose.material3.*
 import androidx.compose.runtime.*
+import androidx.compose.runtime.livedata.observeAsState
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.platform.LocalContext
+import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.tooling.preview.Preview
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
-import com.example.petadoptionmanagement.ui.theme.PetAdoptionManagementTheme
-import com.example.petadoptionmanagement.model.PetModel // This import will be for the new PetModel
-import com.example.petadoptionmanagement.repository.PetRepositoryImpl // This import will be for the new PetRepositoryImpl
-import com.example.petadoptionmanagement.viewmodel.PetViewModel // This import will be for the new PetViewModel
+import androidx.navigation.NavController
+import androidx.navigation.compose.rememberNavController
+import com.example.petadoptionmanagement.model.PetModel
+import com.example.petadoptionmanagement.repository.PetRepositoryImpl
+import com.example.petadoptionmanagement.view.ui.theme.PetAdoptionManagementTheme
+import com.example.petadoptionmanagement.viewmodel.PetViewModel
+import com.example.petadoptionmanagement.viewmodel.PetViewModelFactory
+import androidx.lifecycle.viewmodel.compose.viewModel // For preview
 
-class AddNewPetActivity : ComponentActivity() {
-    override fun onCreate(savedInstanceState: Bundle?) {
-        super.onCreate(savedInstanceState)
-        enableEdgeToEdge()
-        setContent {
-            PetAdoptionManagementTheme {
-                AddNewPetScreen()
-            }
-        }
-    }
-}
-
-@OptIn(ExperimentalMaterial3Api::class) // For TopAppBar and ExposedDropdownMenuBox
+/**
+ * Composable screen for adding a new pet.
+ * This screen provides a form for users to input pet details and submit them to the database.
+ * It uses the PetViewModel to handle data operations and navigation.
+ *
+ * @param navController The NavController for navigating back or to other screens.
+ * @param petViewModel The ViewModel instance responsible for pet data operations.
+ */
+@OptIn(ExperimentalMaterial3Api::class) // Required for TopAppBar and ExposedDropdownMenuBox
 @Composable
-fun AddNewPetScreen() {
+fun AddPetScreen(
+    navController: NavController,
+    petViewModel: PetViewModel
+) {
     val context = LocalContext.current
-    val activity = context as? Activity
-
-    // Initialize ViewModel and Repository
-    val petRepository = remember { PetRepositoryImpl() } // Create an instance of your repository
-    val petViewModel = remember { PetViewModel(petRepository) } // Pass the repository to your ViewModel
 
     // State variables for form fields
     var petName by remember { mutableStateOf("") }
     var petBreed by remember { mutableStateOf("") }
-    var petType by remember { mutableStateOf("Dog") } // Default value as in screenshot
+    var petType by remember { mutableStateOf("Dog") } // Default value
     var petAge by remember { mutableStateOf("") }
     var petDescription by remember { mutableStateOf("") }
-    var petStatus by remember { mutableStateOf("Available") } // Default value as in screenshot
-    var petImageUrl by remember { mutableStateOf("") } // Placeholder for image URL
+    var petStatus by remember { mutableStateOf("Available") } // Default value
+    var petImageUrl by remember { mutableStateOf("") } // For image URL (placeholder for now)
 
-    // Dropdown menu state for Type
+    // Dropdown menu states and options
     val petTypes = listOf("Dog", "Cat", "Bird", "Rabbit", "Other")
     var expandedType by remember { mutableStateOf(false) }
 
-    // Dropdown menu state for Status
     val petStatuses = listOf("Available", "Adopted", "Pending", "On Hold")
     var expandedStatus by remember { mutableStateOf(false) }
 
-    // Theme colors for consistency
-    val primaryColor = Color(0xFF6B8E23) // From your existing theme (e.g., AboutActivity background)
-    val onPrimaryColor = Color.White
-    val textColor = Color(0xFF22223B) // Dark text from your existing theme
-    val cardBackgroundColor = Color(0xFFDCDCDC) // Card background from your existing theme
+    // Observe loading and message states from ViewModel
+    val isLoading by petViewModel.loading.observeAsState(initial = false)
+    val message by petViewModel.message.observeAsState(initial = "") // Assuming PetViewModel has a message LiveData
+
+    // Effect to show Toast messages from ViewModel
+    LaunchedEffect(message) {
+        if (message.isNotBlank()) {
+            Toast.makeText(context, message, Toast.LENGTH_SHORT).show()
+            // Optionally, clear the message in ViewModel after showing
+            // petViewModel.clearMessage() // You might add this function to PetViewModel
+        }
+    }
 
     Scaffold(
         topBar = {
@@ -81,11 +81,11 @@ fun AddNewPetScreen() {
                         color = Color.White,
                         fontSize = 20.sp,
                         modifier = Modifier.fillMaxWidth(),
-                        textAlign = Alignment.CenterHorizontally // Center the title
+                        textAlign = Alignment.CenterHorizontally
                     )
                 },
                 navigationIcon = {
-                    IconButton(onClick = { activity?.finish() }) { // Go back
+                    IconButton(onClick = { navController.popBackStack() }) { // Navigate back
                         Icon(
                             imageVector = Icons.AutoMirrored.Filled.ArrowBack,
                             contentDescription = "Back",
@@ -93,7 +93,7 @@ fun AddNewPetScreen() {
                         )
                     }
                 },
-                colors = TopAppBarDefaults.topAppBarColors(containerColor = primaryColor)
+                colors = TopAppBarDefaults.topAppBarColors(containerColor = Color(0xFF6B8E23)) // Theme primary color
             )
         },
         containerColor = Color(0xFFF5F6FA) // Light background color from HomePage
@@ -102,10 +102,9 @@ fun AddNewPetScreen() {
             modifier = Modifier
                 .fillMaxSize()
                 .padding(innerPadding)
-                .padding(horizontal = 16.dp, vertical = 24.dp)
-                .background(Color.Transparent), // Set to transparent so the background color shows
+                .padding(horizontal = 16.dp, vertical = 24.dp),
             horizontalAlignment = Alignment.CenterHorizontally,
-            verticalArrangement = Arrangement.spacedBy(16.dp) // Spacing between form elements
+            verticalArrangement = Arrangement.spacedBy(16.dp)
         ) {
             item {
                 Card(
@@ -113,7 +112,7 @@ fun AddNewPetScreen() {
                     modifier = Modifier
                         .fillMaxWidth()
                         .padding(bottom = 16.dp),
-                    colors = CardDefaults.cardColors(containerColor = Color.White), // White card background as in screenshot
+                    colors = CardDefaults.cardColors(containerColor = Color.White),
                     elevation = CardDefaults.cardElevation(defaultElevation = 8.dp)
                 ) {
                     Column(
@@ -124,10 +123,10 @@ fun AddNewPetScreen() {
                         verticalArrangement = Arrangement.spacedBy(16.dp)
                     ) {
                         Text(
-                            text = "Add New Pet",
+                            text = "Pet Details",
                             fontSize = 24.sp,
-                            fontWeight = androidx.compose.ui.text.font.FontWeight.Bold,
-                            color = textColor,
+                            fontWeight = FontWeight.Bold,
+                            color = Color(0xFF22223B),
                             modifier = Modifier.padding(bottom = 8.dp)
                         )
 
@@ -139,9 +138,9 @@ fun AddNewPetScreen() {
                             singleLine = true,
                             modifier = Modifier.fillMaxWidth(),
                             colors = OutlinedTextFieldDefaults.colors(
-                                focusedBorderColor = primaryColor,
+                                focusedBorderColor = Color(0xFF6B8E23),
                                 unfocusedBorderColor = Color.LightGray,
-                                focusedLabelColor = primaryColor,
+                                focusedLabelColor = Color(0xFF6B8E23),
                                 unfocusedLabelColor = Color.Gray
                             )
                         )
@@ -154,9 +153,9 @@ fun AddNewPetScreen() {
                             singleLine = true,
                             modifier = Modifier.fillMaxWidth(),
                             colors = OutlinedTextFieldDefaults.colors(
-                                focusedBorderColor = primaryColor,
+                                focusedBorderColor = Color(0xFF6B8E23),
                                 unfocusedBorderColor = Color.LightGray,
-                                focusedLabelColor = primaryColor,
+                                focusedLabelColor = Color(0xFF6B8E23),
                                 unfocusedLabelColor = Color.Gray
                             )
                         )
@@ -177,9 +176,9 @@ fun AddNewPetScreen() {
                                     .menuAnchor()
                                     .fillMaxWidth(),
                                 colors = OutlinedTextFieldDefaults.colors(
-                                    focusedBorderColor = primaryColor,
+                                    focusedBorderColor = Color(0xFF6B8E23),
                                     unfocusedBorderColor = Color.LightGray,
-                                    focusedLabelColor = primaryColor,
+                                    focusedLabelColor = Color(0xFF6B8E23),
                                     unfocusedLabelColor = Color.Gray
                                 )
                             )
@@ -207,9 +206,9 @@ fun AddNewPetScreen() {
                             singleLine = true,
                             modifier = Modifier.fillMaxWidth(),
                             colors = OutlinedTextFieldDefaults.colors(
-                                focusedBorderColor = primaryColor,
+                                focusedBorderColor = Color(0xFF6B8E23),
                                 unfocusedBorderColor = Color.LightGray,
-                                focusedLabelColor = primaryColor,
+                                focusedLabelColor = Color(0xFF6B8E23),
                                 unfocusedLabelColor = Color.Gray
                             )
                         )
@@ -223,9 +222,9 @@ fun AddNewPetScreen() {
                                 .fillMaxWidth()
                                 .height(120.dp),
                             colors = OutlinedTextFieldDefaults.colors(
-                                focusedBorderColor = primaryColor,
+                                focusedBorderColor = Color(0xFF6B8E23),
                                 unfocusedBorderColor = Color.LightGray,
-                                focusedLabelColor = primaryColor,
+                                focusedLabelColor = Color(0xFF6B8E23),
                                 unfocusedLabelColor = Color.Gray
                             )
                         )
@@ -246,9 +245,9 @@ fun AddNewPetScreen() {
                                     .menuAnchor()
                                     .fillMaxWidth(),
                                 colors = OutlinedTextFieldDefaults.colors(
-                                    focusedBorderColor = primaryColor,
+                                    focusedBorderColor = Color(0xFF6B8E23),
                                     unfocusedBorderColor = Color.LightGray,
-                                    focusedLabelColor = primaryColor,
+                                    focusedLabelColor = Color(0xFF6B8E23),
                                     unfocusedLabelColor = Color.Gray
                                 )
                             )
@@ -268,25 +267,23 @@ fun AddNewPetScreen() {
                             }
                         }
 
-                        // Image Upload Placeholder (as in screenshot)
+                        // Image Upload Placeholder
                         Row(
                             modifier = Modifier.fillMaxWidth(),
                             verticalAlignment = Alignment.CenterVertically,
                             horizontalArrangement = Arrangement.spacedBy(8.dp)
                         ) {
                             Button(
-                                onClick = { /* TODO: Implement image selection from gallery/camera */
-                                    Toast.makeText(context, "Image upload not implemented yet", Toast.LENGTH_SHORT).show()
-                                },
+                                onClick = { Toast.makeText(context, "Image upload not implemented yet", Toast.LENGTH_SHORT).show() },
                                 colors = ButtonDefaults.buttonColors(containerColor = Color.LightGray),
                                 shape = RoundedCornerShape(8.dp)
                             ) {
-                                Text("Choose File", color = textColor)
+                                Text("Choose File", color = Color(0xFF22223B))
                             }
                             Text("No file chosen", color = Color.Gray)
                         }
 
-                        Spacer(modifier = Modifier.height(16.dp)) // Spacer before buttons
+                        Spacer(modifier = Modifier.height(16.dp))
 
                         // Action Buttons
                         Row(
@@ -296,47 +293,50 @@ fun AddNewPetScreen() {
                         ) {
                             Button(
                                 onClick = {
-                                    // Basic validation
                                     if (petName.isBlank() || petBreed.isBlank() || petAge.isBlank()) {
                                         Toast.makeText(context, "Please fill all required fields (Name, Breed, Age)", Toast.LENGTH_LONG).show()
                                         return@Button
                                     }
 
-                                    // Create PetModel
                                     val newPet = PetModel(
-                                        productId = "", // Firebase will generate this
-                                        productName = petName,
-                                        productBreed = petBreed,
-                                        productType = petType,
-                                        productAge = petAge,
-                                        productDesc = petDescription,
-                                        productStatus = petStatus,
-                                        productImageUrl = petImageUrl // Use placeholder for now
+                                        petId = "", // Firebase will generate this
+                                        petName = petName,
+                                        petBreed = petBreed,
+                                        petType = petType,
+                                        petAge = petAge,
+                                        petDescription = petDescription,
+                                        petStatus = petStatus,
+                                        petImageUrl = petImageUrl // Use placeholder for now
                                     )
 
-                                    // Call ViewModel to add pet
                                     petViewModel.addNewPet(newPet) { success, message ->
                                         if (success) {
                                             Toast.makeText(context, message, Toast.LENGTH_LONG).show()
-                                            activity?.finish() // Go back after successful add
+                                            navController.popBackStack() // Navigate back to dashboard
                                         } else {
                                             Toast.makeText(context, "Error: $message", Toast.LENGTH_LONG).show()
                                         }
                                     }
                                 },
-                                colors = ButtonDefaults.buttonColors(containerColor = Color(0xFF8B4513)), // Earthy brown like Home Page Login
+                                colors = ButtonDefaults.buttonColors(containerColor = Color(0xFF8B4513)),
                                 shape = RoundedCornerShape(12.dp),
-                                modifier = Modifier.weight(1f).height(50.dp)
+                                modifier = Modifier.weight(1f).height(50.dp),
+                                enabled = !isLoading // Disable button while loading
                             ) {
-                                Text("Add Pet", color = Color.White, fontSize = 16.sp)
+                                if (isLoading) {
+                                    CircularProgressIndicator(color = Color.White, modifier = Modifier.size(24.dp))
+                                } else {
+                                    Text("Add Pet", color = Color.White, fontSize = 16.sp)
+                                }
                             }
                             Spacer(modifier = Modifier.width(16.dp))
                             OutlinedButton(
-                                onClick = { activity?.finish() }, // Go back
-                                colors = ButtonDefaults.outlinedButtonColors(contentColor = Color(0xFF4A4E69)), // Dark gray text
-                                border = ButtonDefaults.outlinedButtonBorder.copy(width = 2.dp, color = Color(0xFF4A4E69)), // Dark gray border
+                                onClick = { navController.popBackStack() }, // Go back
+                                colors = ButtonDefaults.outlinedButtonColors(contentColor = Color(0xFF4A4E69)),
+                                border = ButtonDefaults.outlinedButtonBorder.copy(width = 2.dp, color = Color(0xFF4A4E69)),
                                 shape = RoundedCornerShape(12.dp),
-                                modifier = Modifier.weight(1f).height(50.dp)
+                                modifier = Modifier.weight(1f).height(50.dp),
+                                enabled = !isLoading
                             ) {
                                 Text("Cancel", fontSize = 16.sp)
                             }
@@ -350,8 +350,11 @@ fun AddNewPetScreen() {
 
 @Preview(showBackground = true, widthDp = 360, heightDp = 800)
 @Composable
-fun AddNewPetScreenPreview() {
+fun AddPetScreenPreview() {
     PetAdoptionManagementTheme {
-        AddNewPetScreen()
+        val navController = rememberNavController()
+        val dummyRepo = remember { PetRepositoryImpl() }
+        val dummyViewModel = viewModel<PetViewModel>(factory = PetViewModelFactory(dummyRepo))
+        AddPetScreen(navController = navController, petViewModel = dummyViewModel)
     }
 }

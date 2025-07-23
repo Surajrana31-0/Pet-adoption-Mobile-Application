@@ -1,10 +1,6 @@
 package com.example.petadoptionmanagement.view
 
-import android.os.Bundle
 import android.widget.Toast
-import androidx.activity.ComponentActivity
-import androidx.activity.compose.setContent
-import androidx.activity.enableEdgeToEdge
 import androidx.compose.foundation.Image
 import androidx.compose.foundation.background
 import androidx.compose.foundation.clickable
@@ -17,6 +13,7 @@ import androidx.compose.material.icons.filled.Visibility
 import androidx.compose.material.icons.filled.VisibilityOff
 import androidx.compose.material3.*
 import androidx.compose.runtime.*
+import androidx.compose.runtime.livedata.observeAsState
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
@@ -32,56 +29,36 @@ import androidx.compose.ui.text.style.TextDecoration
 import androidx.compose.ui.tooling.preview.Preview
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
+import androidx.navigation.NavController
+import androidx.navigation.compose.rememberNavController
 import com.example.petadoptionmanagement.R
 import com.example.petadoptionmanagement.ui.theme.PetAdoptionManagementTheme
+import com.example.petadoptionmanagement.viewmodel.UserViewModel // Import UserViewModel
 
-class SignUpActivity : ComponentActivity() {
-    override fun onCreate(savedInstanceState: Bundle?) {
-        super.onCreate(savedInstanceState)
-        enableEdgeToEdge()
-        setContent {
-            PetAdoptionManagementTheme {
-                // Get the context directly here in onCreate scope
-                val activityContext = this@SignUpActivity // Explicitly reference the Activity's context
-
-                SignUpScreen(
-                    onCreateAccountClick = { username, email, password ->
-                        // Use activityContext for Toast
-                        Toast.makeText(activityContext, "Attempting to create account for $username...", Toast.LENGTH_SHORT).show()
-                        // In a real app, you would pass these credentials to a ViewModel or authentication service
-                        // and then navigate based on the result.
-                    },
-                    onSignInClick = {
-                        Toast.makeText(activityContext, "Navigating to Sign In Screen.", Toast.LENGTH_SHORT).show()
-                        // Here you'd likely start the SignInActivity or navigate using Jetpack Navigation
-                        // startActivity(Intent(activityContext, SignInActivity::class.java)) // Example for direct activity start
-                    },
-                    onMenuClick = {
-                        Toast.makeText(activityContext, "Menu icon clicked!", Toast.LENGTH_SHORT).show()
-                    }
-                )
-            }
-        }
-    }
-}
+// IMPORTANT: The `SignUpActivity` class is removed. This Composable function
+// will be directly used by your `MainActivity`'s NavHost.
 
 @Composable
 fun SignUpScreen(
-    onCreateAccountClick: (String, String, String) -> Unit, // Add parameters for actual sign-up data
-    onSignInClick: () -> Unit,
-    onMenuClick: () -> Unit
+    navController: NavController, // NavController for navigation
+    userViewModel: UserViewModel // UserViewModel for authentication logic
 ) {
-    // LocalContext.current is primarily used *inside* Composables for operations that need context,
-    // like resource loading or showing Toasts based on UI events.
     val context = LocalContext.current
 
     var username by remember { mutableStateOf("") }
     var email by remember { mutableStateOf("") }
     var password by remember { mutableStateOf("") }
     var confirmPassword by remember { mutableStateOf("") }
-    var passwordVisible by remember { mutableStateOf(false) } // State for password visibility
-    var confirmPasswordVisible by remember { mutableStateOf(false) } // State for confirm password visibility
-    var termsAccepted by remember { mutableStateOf(false) } // State for checkbox
+    var passwordVisible by remember { mutableStateOf(false) }
+    var confirmPasswordVisible by remember { mutableStateOf(false) }
+    var termsAccepted by remember { mutableStateOf(false) }
+
+    // Observe LiveData from the UserViewModel
+    val isLoading by userViewModel.isLoading.observeAsState(initial = userViewModel.isLoading.value ?: false)
+    val message by userViewModel.message.observeAsState(initial = userViewModel.message.value ?: "")
+    // isLoggedIn is observed by MainActivity for main navigation, but can be useful here too if needed.
+    val isLoggedIn by userViewModel.isLoggedIn.observeAsState(initial = false)
+
 
     // Define custom colors to match the image
     val backgroundColor = Color(0xFF6B8E23) // Olive green background
@@ -89,10 +66,30 @@ fun SignUpScreen(
     val buttonColor = Color(0xFF8B4513) // Reddish-brown for the Create Account button
     val textFieldBackgroundColor = Color(0xFFFFFFFF) // White for input fields
 
+    // Effect for displaying messages (success/failure)
+    LaunchedEffect(message) {
+        if (message.isNotBlank()) {
+            Toast.makeText(context, message, Toast.LENGTH_SHORT).show()
+            // Optionally clear the message after showing
+            // userViewModel.clearMessage() // You might add a clearMessage() function in ViewModel
+        }
+    }
+
+    // Effect for handling navigation after successful sign-up and auto-login
+    LaunchedEffect(isLoggedIn) {
+        if (isLoggedIn) {
+            // After successful sign-up and auto-login, navigate to the home screen
+            navController.navigate("home") {
+                popUpTo("login") { inclusive = true } // Clear login/signup from back stack
+            }
+        }
+    }
+
+
     Box(
         modifier = Modifier
             .fillMaxSize()
-            .background(backgroundColor), // Set the main background color
+            .background(backgroundColor),
         contentAlignment = Alignment.Center
     ) {
         // Top section with decorative elements: paw print icon, menu icon, and dog image
@@ -124,7 +121,10 @@ fun SignUpScreen(
                     tint = Color.White,
                     modifier = Modifier
                         .size(36.dp)
-                        .clickable { onMenuClick() } // Use the passed-in callback
+                        .clickable {
+                            // This will still show a Toast as per your original UI
+                            Toast.makeText(context, "Menu icon clicked!", Toast.LENGTH_SHORT).show()
+                        }
                 )
             }
             Spacer(modifier = Modifier.height(20.dp))
@@ -304,21 +304,32 @@ fun SignUpScreen(
                         } else if (!termsAccepted) {
                             Toast.makeText(context, "Please accept the terms and policy.", Toast.LENGTH_SHORT).show()
                         } else {
-                            onCreateAccountClick(username, email, password) // Invoke the passed-in callback with data
+                            // Call the ViewModel's signUp function
+                            // IMPORTANT: Ensure your UserViewModel.signUp method is updated
+                            // to accept username, email, and password.
+                            userViewModel.signUp(username, email, password) { success, message ->
+                                // The LaunchedEffect will handle the navigation and toasts
+                                // No direct navigation or toast needed here.
+                            }
                         }
                     },
                     modifier = Modifier
                         .fillMaxWidth()
                         .height(55.dp),
                     shape = RoundedCornerShape(16.dp),
-                    colors = ButtonDefaults.buttonColors(containerColor = buttonColor)
+                    colors = ButtonDefaults.buttonColors(containerColor = buttonColor),
+                    enabled = !isLoading // Disable button while loading
                 ) {
-                    Text(
-                        "Create Account",
-                        fontSize = 20.sp,
-                        fontWeight = FontWeight.SemiBold,
-                        color = Color.White
-                    )
+                    if (isLoading) {
+                        CircularProgressIndicator(color = Color.White, modifier = Modifier.size(24.dp))
+                    } else {
+                        Text(
+                            "Create Account",
+                            fontSize = 20.sp,
+                            fontWeight = FontWeight.SemiBold,
+                            color = Color.White
+                        )
+                    }
                 }
                 Spacer(modifier = Modifier.height(10.dp))
 
@@ -334,7 +345,8 @@ fun SignUpScreen(
                     )
                     Spacer(modifier = Modifier.width(4.dp))
                     TextButton(onClick = {
-                        onSignInClick() // Invoke the passed-in callback
+                        // Navigate to the login screen
+                        navController.navigate("login")
                     }) {
                         Text(
                             "sign in",
@@ -354,10 +366,14 @@ fun SignUpScreen(
 @Composable
 fun SignUpPreview() {
     PetAdoptionManagementTheme {
-        SignUpScreen(
-            onCreateAccountClick = { _, _, _ -> /* No action in preview */ },
-            onSignInClick = { /* No action in preview */ },
-            onMenuClick = { /* No action in preview */ }
-        )
+        // For preview, you'd typically pass a mock ViewModel or handle states manually.
+        // For simplicity, we'll create a dummy ViewModel and NavController here.
+        val context = LocalContext.current
+        val dummyNavController = rememberNavController()
+        val dummyUserViewModel = remember {
+            com.example.petadoptionmanagement.repository.UserRepositoryImpl(context) // Assuming UserRepositoryImpl is accessible
+            com.example.petadoptionmanagement.viewmodel.UserViewModel(com.example.petadoptionmanagement.repository.UserRepositoryImpl(context))
+        }
+        SignUpScreen(navController = dummyNavController, userViewModel = dummyUserViewModel)
     }
 }
