@@ -1,24 +1,27 @@
 package com.example.petadoptionmanagement.view
 
-import android.os.Bundle
-import androidx.activity.ComponentActivity
-import androidx.activity.compose.setContent
-import androidx.activity.enableEdgeToEdge
 import androidx.compose.foundation.Image
 import androidx.compose.foundation.background
 import androidx.compose.foundation.clickable
 import androidx.compose.foundation.layout.*
+import androidx.compose.foundation.lazy.LazyRow
+import androidx.compose.foundation.lazy.items
 import androidx.compose.foundation.rememberScrollState
-import androidx.compose.foundation.verticalScroll
 import androidx.compose.foundation.shape.RoundedCornerShape
+import androidx.compose.foundation.verticalScroll
+import androidx.compose.material.icons.Icons
+import androidx.compose.material.icons.filled.Menu
 import androidx.compose.material3.*
 import androidx.compose.runtime.Composable
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.res.painterResource
+import androidx.compose.ui.text.SpanStyle
+import androidx.compose.ui.text.buildAnnotatedString
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.style.TextAlign
+import androidx.compose.ui.text.withStyle
 import androidx.compose.ui.tooling.preview.Preview
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
@@ -26,61 +29,28 @@ import androidx.navigation.NavController
 import androidx.navigation.compose.rememberNavController
 import com.example.petadoptionmanagement.R
 import com.example.petadoptionmanagement.ui.theme.PetAdoptionManagementTheme
-import androidx.compose.foundation.lazy.LazyRow
-import androidx.compose.foundation.lazy.items
-import androidx.compose.ui.draw.clip
-import androidx.compose.ui.layout.ContentScale
-import androidx.compose.ui.text.SpanStyle
-import androidx.compose.ui.text.buildAnnotatedString
-import androidx.compose.ui.text.withStyle
-
-// New imports for Icons
-import androidx.compose.material.icons.Icons
-import androidx.compose.material.icons.filled.Menu
-
 
 // --- Data Classes for Demo Data ---
 data class Pet(val id: Int, val name: String, val breed: String, val age: String, val imageRes: Int)
 data class Feature(val iconRes: Int, val title: String, val description: String)
 
-// --- HomePage Activity ---
-class HomePage : ComponentActivity() {
-    override fun onCreate(savedInstanceState: Bundle?) {
-        super.onCreate(savedInstanceState)
-        enableEdgeToEdge()
-        setContent {
-            PetAdoptionManagementTheme {
-                // NavController is managed in MainActivity, but we'll use a mock for preview here
-                // In actual AppNavigation, navController will be passed from higher level
-                // This HomePage Activity will typically be launched by the NavController.
-                // For direct launch for testing HomePageScaffold, you'd create NavController here:
-                // val navController = rememberNavController()
-                // HomePageScreen(navController = navController)
-            }
-        }
-    }
-}
-
-// --- Main Composable for the HomePage Screen ---
-@OptIn(ExperimentalMaterial3Api::class) // For TopAppBar
+@OptIn(ExperimentalMaterial3Api::class)
 @Composable
-fun HomePageScreen(navController: NavController ) { // Renamed from HomePageScaffold to reflect it's a full screen
+fun HomePageScreen(navController: NavController) {
     Scaffold(
         topBar = { HomeHeader(navController = navController) },
         bottomBar = { HomeFooter(navController = navController) },
-        containerColor = Color(0xFFF5F6FA) // Light background
+        containerColor = Color(0xFFF5F6FA)
     ) { innerPadding ->
         HomeContent(modifier = Modifier.padding(innerPadding), navController = navController)
     }
 }
 
-// --- Home Header ---
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
 fun HomeHeader(navController: NavController) {
     TopAppBar(
         title = {
-            // "PetEy" text will be centered within the title area
             Text(
                 "PetEy",
                 fontWeight = FontWeight.ExtraBold,
@@ -92,38 +62,31 @@ fun HomeHeader(navController: NavController) {
         actions = {
             Row(
                 verticalAlignment = Alignment.CenterVertically,
-                horizontalArrangement = Arrangement.spacedBy(8.dp) // Spacing between buttons and icon
+                horizontalArrangement = Arrangement.spacedBy(8.dp)
             ) {
-                // Login Button
                 Button(
-                    onClick = { navController.navigate("login") }, // Navigate to login route
-                    colors = ButtonDefaults.buttonColors(containerColor = Color(0xFF8B4513)), // Earthy brown button
+                    onClick = { navController.navigate("login") },
+                    colors = ButtonDefaults.buttonColors(containerColor = Color(0xFF8B4513)),
                     shape = RoundedCornerShape(8.dp),
                     contentPadding = PaddingValues(horizontal = 12.dp, vertical = 6.dp)
                 ) {
                     Text("Login", color = Color.White, fontWeight = FontWeight.SemiBold, fontSize = 16.sp)
                 }
-
-                // Sign Up Button
                 Button(
-                    onClick = { navController.navigate("signup") }, // Assuming you have a "signup" route
-                    colors = ButtonDefaults.buttonColors(containerColor = Color(0xFF4CAF50)), // A different color for signup
+                    onClick = { navController.navigate("signup") },
+                    colors = ButtonDefaults.buttonColors(containerColor = Color(0xFF4CAF50)),
                     shape = RoundedCornerShape(8.dp),
                     contentPadding = PaddingValues(horizontal = 12.dp, vertical = 6.dp)
                 ) {
                     Text("Sign Up", color = Color.White, fontWeight = FontWeight.SemiBold, fontSize = 16.sp)
                 }
-
-                // Hamburger Menu Icon
                 IconButton(onClick = {
-                    // This is where you would typically open a Navigation Drawer
-                    // For preview, or simple navigation, you could navigate to a "Home" route or show a toast.
-                    navController.navigate("home") // Example: Navigate home, or show a temporary menu
+                    navController.navigate("home")
                 }) {
                     Icon(
                         imageVector = Icons.Default.Menu,
                         contentDescription = "Menu",
-                        tint = Color(0xFF22223B) // Dark color for the icon
+                        tint = Color(0xFF22223B)
                     )
                 }
             }
@@ -132,7 +95,6 @@ fun HomeHeader(navController: NavController) {
     )
 }
 
-// --- Home Footer ---
 @Composable
 fun HomeFooter(navController: NavController) {
     Surface(
@@ -142,91 +104,76 @@ fun HomeFooter(navController: NavController) {
         Column(
             modifier = Modifier
                 .fillMaxWidth()
-                .padding(vertical = 20.dp, horizontal = 16.dp), // Increased padding
+                .padding(vertical = 20.dp, horizontal = 16.dp),
             horizontalAlignment = Alignment.CenterHorizontally,
-            verticalArrangement = Arrangement.spacedBy(10.dp) // Spacing for elements
+            verticalArrangement = Arrangement.spacedBy(10.dp)
         ) {
-            // Contact Info
             Text(
                 text = "Contact Us: info@petadoption.com | +91 9806400001",
                 color = Color(0xFF4A4E69),
                 fontSize = 14.sp,
                 textAlign = TextAlign.Center
             )
-            // Social Media Icons (placeholders for now)
             Row(horizontalArrangement = Arrangement.spacedBy(20.dp)) {
-                Image(painter = painterResource(id = R.drawable.facebook), contentDescription = "Facebook", modifier = Modifier.size(28.dp).clickable { /* TODO: Open Facebook */ })
-                Image(painter = painterResource(id = R.drawable.twitter), contentDescription = "Twitter", modifier = Modifier.size(28.dp).clickable { /* TODO: Open Twitter */ })
-                Image(painter = painterResource(id = R.drawable.instagram), contentDescription = "Instagram", modifier = Modifier.size(28.dp).clickable { /* TODO: Open Instagram */ })
+                Image(painter = painterResource(id = R.drawable.facebook), contentDescription = "Facebook", modifier = Modifier.size(28.dp).clickable { })
+                Image(painter = painterResource(id = R.drawable.twitter), contentDescription = "Twitter", modifier = Modifier.size(28.dp).clickable { })
+                Image(painter = painterResource(id = R.drawable.instagram), contentDescription = "Instagram", modifier = Modifier.size(28.dp).clickable { })
             }
-            // Copyright Note
             Text(
                 "© 2025 Pet Adoption Management. All rights reserved.",
                 color = Color(0xFF4A4E69),
-                fontSize = 12.sp, // Slightly smaller
+                fontSize = 12.sp,
                 textAlign = TextAlign.Center
             )
         }
     }
 }
 
-// --- Home Content (Vertically Scrollable) ---
 @Composable
 fun HomeContent(modifier: Modifier = Modifier, navController: NavController) {
     Column(
         modifier = modifier
             .verticalScroll(rememberScrollState())
             .fillMaxSize()
-            .padding(horizontal = 16.dp, vertical = 24.dp), // Increased vertical padding
-        verticalArrangement = Arrangement.spacedBy(40.dp) // Increased spacing between sections
+            .padding(horizontal = 16.dp, vertical = 24.dp),
+        verticalArrangement = Arrangement.spacedBy(40.dp)
     ) {
-        // Hero Banner Section
         HeroBannerSection(navController = navController)
-
-        // Featured Pets Section
         FeaturedPetsSection(navController = navController)
-
-        // Why Adopt With Us Section
         WhyAdoptWithUsSection()
-
-        // About & Info Section
         AboutInfoSection(navController = navController)
     }
 }
 
-// --- Hero Banner Section Composable ---
 @Composable
 fun HeroBannerSection(navController: NavController) {
     Card(
         shape = RoundedCornerShape(24.dp),
         modifier = Modifier.fillMaxWidth(),
-        colors = CardDefaults.cardColors(containerColor = Color.Transparent), // Transparent to show background image
-        elevation = CardDefaults.cardElevation(defaultElevation = 0.dp) // No shadow if background image handles it
+        colors = CardDefaults.cardColors(containerColor = Color.Transparent),
+        elevation = CardDefaults.cardElevation(defaultElevation = 0.dp)
     ) {
         Box(
             modifier = Modifier
                 .fillMaxWidth()
-                .height(280.dp) // Increased height for the banner
+                .height(280.dp)
         ) {
-            // Background Image
             Image(
-                painter = painterResource(id = R.drawable.hero_pet), // Your banner image
+                painter = painterResource(id = R.drawable.hero_pet),
                 contentDescription = "Happy adopted pets banner",
                 contentScale = ContentScale.Crop,
                 modifier = Modifier.fillMaxSize()
             )
-
-            // Overlay Content
             Column(
                 modifier = Modifier
                     .fillMaxSize()
-                    .background(Color.Black.copy(alpha = 0.4f)) // Semi-transparent overlay
+                    .background(Color.Black.copy(alpha = 0.4f))
                     .padding(32.dp),
                 verticalArrangement = Arrangement.Center,
                 horizontalAlignment = Alignment.CenterHorizontally
             ) {
                 Text(
-                    text = "Find Your Perfect Companion", // Updated welcome message
+                    text = "Find Your Perfect Companion",
                     fontSize = 32.sp,
                     fontWeight = FontWeight.ExtraBold,
                     color = Color.White,
@@ -243,24 +190,24 @@ fun HeroBannerSection(navController: NavController) {
                 )
                 Spacer(modifier = Modifier.height(24.dp))
                 Button(
-                    onClick = { navController.navigate("login") }, // CTA to Login Page
+                    onClick = { navController.navigate("login") },
                     colors = ButtonDefaults.buttonColors(
-                        containerColor = Color(0xFF8B4513) // Earthy brown for CTA
+                        containerColor = Color(0xFF8B4513)
                     ),
-                    shape = RoundedCornerShape(16.dp), // Slightly more rounded
+                    shape = RoundedCornerShape(16.dp),
                     modifier = Modifier
-                        .height(56.dp) // Taller button
-                        .fillMaxWidth(0.7f) // Wider button to accommodate text
+                        .height(56.dp)
+                        .fillMaxWidth(0.7f)
                 ) {
                     Text(
                         text = buildAnnotatedString {
                             append("Adopt Now ")
-                            withStyle(style = SpanStyle(fontWeight = FontWeight.ExtraBold)) { // Adding arrow
+                            withStyle(style = SpanStyle(fontWeight = FontWeight.ExtraBold)) {
                                 append("→")
                             }
                         },
                         fontWeight = FontWeight.SemiBold,
-                        fontSize = 18.sp, // Keeping larger font for impact
+                        fontSize = 18.sp,
                         color = Color.White
                     )
                 }
@@ -269,7 +216,6 @@ fun HeroBannerSection(navController: NavController) {
     }
 }
 
-// --- Featured Pets Section Composable ---
 @Composable
 fun FeaturedPetsSection(navController: NavController) {
     Column(modifier = Modifier.fillMaxWidth()) {
@@ -282,28 +228,24 @@ fun FeaturedPetsSection(navController: NavController) {
         )
         LazyRow(
             horizontalArrangement = Arrangement.spacedBy(16.dp),
-            contentPadding = PaddingValues(horizontal = 4.dp) // Small padding to see card edges
+            contentPadding = PaddingValues(horizontal = 4.dp)
         ) {
             val featuredPets = listOf(
                 Pet(1, "Buddy", "Golden Retriever", "2 years", R.drawable.featuredpet1),
                 Pet(2, "Whiskers", "Tabby Cat", "1 year", R.drawable.featured_pet2),
                 Pet(3, "Rocky", "Beagle", "3 years", R.drawable.featuredpet3),
-                Pet(4, "Luna", "Siamese Cat", "6 months", R.drawable.featuredpet4), // Example
-                Pet(5, "Max", "Labrador", "4 years", R.drawable.dog_image) // Example
+                Pet(4, "Luna", "Siamese Cat", "6 months", R.drawable.featuredpet4),
+                Pet(5, "Max", "Labrador", "4 years", R.drawable.dog_image)
             )
             items(featuredPets) { pet ->
                 PetCard(pet = pet) {
-                    // Clicking on a featured pet card should prompt login/registration
-                    // In a real app, you might navigate to a PetDetail screen if authenticated,
-                    // otherwise, navigate to login.
-                    navController.navigate("login") // Direct to login for now
+                    navController.navigate("login")
                 }
             }
         }
     }
 }
 
-// Helper Composable for a single Pet Card
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
 fun PetCard(pet: Pet, onClick: () -> Unit) {
@@ -311,8 +253,8 @@ fun PetCard(pet: Pet, onClick: () -> Unit) {
         shape = RoundedCornerShape(16.dp),
         elevation = CardDefaults.elevatedCardElevation(defaultElevation = 6.dp),
         modifier = Modifier
-            .width(180.dp) // Fixed width for horizontal scroll
-            .height(250.dp) // Fixed height
+            .width(180.dp)
+            .height(250.dp)
             .clickable(onClick = onClick),
         colors = CardDefaults.elevatedCardColors(containerColor = Color.White)
     ) {
@@ -323,7 +265,7 @@ fun PetCard(pet: Pet, onClick: () -> Unit) {
                 contentScale = ContentScale.Crop,
                 modifier = Modifier
                     .fillMaxWidth()
-                    .height(140.dp) // Image takes top half
+                    .height(140.dp)
                     .clip(RoundedCornerShape(topStart = 16.dp, topEnd = 16.dp))
             )
             Column(
@@ -348,7 +290,6 @@ fun PetCard(pet: Pet, onClick: () -> Unit) {
     }
 }
 
-// --- Why Adopt With Us Section Composable ---
 @Composable
 fun WhyAdoptWithUsSection() {
     Column(
@@ -383,7 +324,6 @@ fun WhyAdoptWithUsSection() {
     }
 }
 
-// Reusing existing FeatureCard with slight style adjustments
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
 fun FeatureCard(
@@ -394,23 +334,23 @@ fun FeatureCard(
 ) {
     ElevatedCard(
         shape = RoundedCornerShape(20.dp),
-        modifier = modifier.height(200.dp), // Increased height for more content
-        elevation = CardDefaults.elevatedCardElevation(defaultElevation = 6.dp), // Slightly less shadow
+        modifier = modifier.height(200.dp),
+        elevation = CardDefaults.elevatedCardElevation(defaultElevation = 6.dp),
         colors = CardDefaults.elevatedCardColors(containerColor = Color.White)
     ) {
         Column(
             modifier = Modifier
                 .fillMaxSize()
-                .padding(16.dp), // Adjusted padding
-            verticalArrangement = Arrangement.Center, // Center vertically
+                .padding(16.dp),
+            verticalArrangement = Arrangement.Center,
             horizontalAlignment = Alignment.CenterHorizontally
         ) {
             Image(
                 painter = painterResource(id = iconRes),
                 contentDescription = title,
-                modifier = Modifier.size(50.dp) // Larger icons
+                modifier = Modifier.size(50.dp)
             )
-            Spacer(modifier = Modifier.height(8.dp)) // Spacing
+            Spacer(modifier = Modifier.height(8.dp))
             Text(
                 text = title,
                 fontWeight = FontWeight.Bold,
@@ -418,10 +358,10 @@ fun FeatureCard(
                 color = Color(0xFF22223B),
                 textAlign = TextAlign.Center
             )
-            Spacer(modifier = Modifier.height(4.dp)) // Spacing
+            Spacer(modifier = Modifier.height(4.dp))
             Text(
                 text = description,
-                fontSize = 13.sp, // Slightly smaller for description
+                fontSize = 13.sp,
                 color = Color(0xFF4A4E69),
                 textAlign = TextAlign.Center
             )
@@ -429,7 +369,6 @@ fun FeatureCard(
     }
 }
 
-// --- About & Info Section Composable ---
 @Composable
 fun AboutInfoSection(navController: NavController) {
     Card(
@@ -459,7 +398,7 @@ fun AboutInfoSection(navController: NavController) {
             )
             Spacer(modifier = Modifier.height(24.dp))
             Button(
-                onClick = { navController.navigate("about") }, // Navigates to the About page
+                onClick = { navController.navigate("about") },
                 colors = ButtonDefaults.buttonColors(
                     containerColor = Color(0xFF8B4513)
                 ),
@@ -472,14 +411,11 @@ fun AboutInfoSection(navController: NavController) {
     }
 }
 
-
-// --- Preview ---
-@Preview(showBackground = true, widthDp = 360, heightDp = 1000) // Adjust height to show more content
+@Preview(showBackground = true, widthDp = 360, heightDp = 1000)
 @Composable
 fun HomePageScreenPreview() {
     PetAdoptionManagementTheme {
-        // For preview, we use a mock NavController
         val navController = rememberNavController()
         HomePageScreen(navController = navController)
     }
-}
+} 
