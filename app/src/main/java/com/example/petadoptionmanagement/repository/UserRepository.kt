@@ -5,32 +5,37 @@ import com.google.firebase.auth.FirebaseUser
 
 /**
  * Interface defining the contract for user data operations.
- * This is part of the Repository layer in the MVVM architecture for user management.
  */
 interface UserRepository {
 
     /**
-     * Registers a new user with email and password using Firebase Authentication,
-     * and stores additional user details (like username) in Firebase Realtime Database.
+     * Creates a new user in Firebase Authentication.
+     * This is the first step of the registration process.
      *
-     * @param userModel The UserModel object containing username and email for registration.
-     * @param password The raw password provided by the user.
-     * @param callback A lambda function to be called upon completion,
-     * indicating success/failure, a descriptive message, and the created UserModel (if successful).
+     * @param email The user's email.
+     * @param password The user's password.
+     * @return The created FirebaseUser, or null if auth creation fails before an exception.
+     * @throws Exception if Firebase Authentication operation encounters an error.
      */
-    fun signUp(
-        userModel: UserModel, // IMPORTANT CHANGE: Changed from separate username, email to a UserModel object
-        password: String,
-        callback: (Boolean, String, UserModel?) -> Unit // IMPORTANT CHANGE: Added UserModel? to callback
-    )
+    suspend fun createUserInAuth(email: String, password: String): FirebaseUser?
+
+    /**
+     * Saves additional user details (like username, contact, etc.) to Cloud Firestore.
+     * This is typically called after successful user creation in Firebase Authentication.
+     *
+     * @param userId The UID of the authenticated user (from Firebase Auth).
+     * @param userModel The UserModel containing all details to be saved.
+     * @throws Exception if the Firestore operation encounters an error.
+     */
+    suspend fun saveUserDetails(userId: String, userModel: UserModel)
 
     /**
      * Signs in an existing user with email and password using Firebase Authentication.
+     * The callback should provide the UserModel upon successful sign-in.
      *
      * @param email The email address of the user.
      * @param password The password of the user.
-     * @param callback A lambda function to be called upon completion,
-     * indicating success/failure, a descriptive message, and the signed-in UserModel (if successful).
+     * @param callback (success: Boolean, message: String, userModel: UserModel?)
      */
     fun signIn(
         email: String,
@@ -39,49 +44,28 @@ interface UserRepository {
     )
 
     /**
-     * Signs out the current user from Firebase Authentication and clears local session data.
-     *
-     * @param callback A lambda function to be called upon completion,
-     * indicating success/failure and a descriptive message.
+     * Signs out the current user from Firebase Authentication.
      */
     fun signOut(callback: (Boolean, String) -> Unit)
 
     /**
-     * Adds or updates a user's profile data in the Realtime Database.
-     *
-     * @param userId The unique ID of the user.
-     * @param model The UserModel object containing the user's data.
-     * @param callback A lambda function to be called upon completion,
-     * indicating success/failure and a descriptive message.
-     */
-    fun addUserToDatabase(
-        userId: String, model: UserModel,
-        callback: (Boolean, String) -> Unit
-    )
-
-    /**
      * Sends a password reset email to the specified email address.
-     *
-     * @param email The email address to send the reset link to.
-     * @param callback A lambda function to be called upon completion,
-     * indicating success/failure and a descriptive message.
      */
     fun forgetPassword(email: String, callback: (Boolean, String) -> Unit)
 
     /**
      * Synchronously retrieves the current FirebaseUser object.
-     * Note: For observing changes, use `observeAuthState`.
-     *
-     * @return The current FirebaseUser, or null if no user is logged in.
+     * Prefer observeAuthState for reactive updates.
      */
-    fun getCurrentUser(): FirebaseUser?
+    fun getCurrentFirebaseUser(): FirebaseUser? // Renamed from your original getCurrentUser() to avoid overload clash
 
     /**
-     * Retrieves a user model from the Realtime Database by user ID.
-     *
-     * @param userId The unique ID of the user to retrieve.
-     * @param callback A lambda function to be called upon completion,
-     * indicating success/failure, a descriptive message, and the retrieved UserModel (if successful).
+     * Asynchronously retrieves the UserModel of the currently logged-in user from Firestore.
+     */
+    fun getCurrentUserModel(callback: (UserModel?) -> Unit) // Renamed from your original getCurrentUser(callback)
+
+    /**
+     * Retrieves a specific user's UserModel from Firestore by their user ID.
      */
     fun getUserFromDatabase(
         userId: String,
@@ -89,41 +73,29 @@ interface UserRepository {
     )
 
     /**
-     * Asynchronously retrieves the currently logged-in user's data from the database.
+     * Provides a mechanism to observe real-time changes in the user's authentication state
+     * and fetches the corresponding UserModel from Firestore.
      *
-     * @param callback A lambda function that returns the UserModel if a user is logged in and their data is found, null otherwise.
+     * @param observer (isLoggedIn: Boolean, userModel: UserModel?)
      */
-    fun getCurrentUser(callback: (UserModel?) -> Unit)
+    fun observeAuthState(observer: (Boolean, UserModel?) -> Unit)
 
     /**
-     * Provides a mechanism to observe real-time changes in the user's authentication state.
-     * This callback will be triggered whenever a user logs in, logs out, or the auth state changes.
-     *
-     * @param callback A lambda function that returns true if a user is logged in and their UserModel,
-     * or false and null if no user is logged in.
-     */
-    fun observeAuthState(callback: (Boolean, UserModel?) -> Unit)
-
-    /**
-     * Deletes the user's account from Firebase Authentication and their data from Realtime Database.
-     *
-     * @param userId The ID of the user to delete.
-     * @param callback A lambda function to be called upon completion,
-     * indicating success/failure and a descriptive message.
+     * Deletes the user's account from Firebase Authentication and their data from Firestore.
      */
     fun deleteAccount(userId: String, callback: (Boolean, String) -> Unit)
 
     /**
-     * Updates specific fields of a user's profile in the Realtime Database.
-     *
-     * @param userId The ID of the user whose profile is to be updated.
-     * @param data A map containing the fields to update and their new values.
-     * @param callback A lambda function to be called upon completion,
-     * indicating success/failure and a descriptive message.
+     * Updates specific fields of a user's profile in Firestore.
      */
     fun editProfile(
         userId: String,
-        data: MutableMap<String, Any?>,
+        data: Map<String, Any?>, // Changed to Map from MutableMap for broader compatibility
         callback: (Boolean, String) -> Unit
     )
+
+    // Note: The original `signUp` and `addUserToDatabase` are effectively replaced/covered by
+    // `createUserInAuth`, `saveUserDetails`, and how the ViewModel now orchestrates these.
+    // If you had a specific use case for addUserToDatabase separate from initial signup,
+    // you might keep a version of it, perhaps as a suspend function.
 }

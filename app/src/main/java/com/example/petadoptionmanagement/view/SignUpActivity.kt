@@ -34,83 +34,77 @@ import androidx.compose.ui.text.style.TextDecoration
 import androidx.compose.ui.tooling.preview.Preview
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
-import androidx.lifecycle.ViewModelProvider // Added import for ViewModelProvider
+import androidx.lifecycle.ViewModelProvider
 import androidx.navigation.NavController
 import androidx.navigation.compose.rememberNavController
 import com.example.petadoptionmanagement.R
-import com.example.petadoptionmanagement.repository.UserRepositoryImpl // Assuming you have this
+import com.example.petadoptionmanagement.model.UserModel
+import com.example.petadoptionmanagement.repository.UserRepositoryImpl
 import com.example.petadoptionmanagement.ui.theme.PetAdoptionManagementTheme
 import com.example.petadoptionmanagement.viewmodel.UserViewModel
-import com.example.petadoptionmanagement.viewmodel.UserViewModelFactory // Assuming you have this
 
-/**
- * SignUpActivity: This is the Android Activity that will host your SignUpScreen UI.
- * It's responsible for setting up the Compose content, managing the ViewModel lifecycle,
- * and handling navigation that involves transitioning between different Activities.
- */
 class SignUpActivity : ComponentActivity() {
 
-    private lateinit var userViewModel: UserViewModel // Declare ViewModel
+    private lateinit var userViewModel: UserViewModel
 
     override fun onCreate(savedInstanceState: Bundle?) {
         super.onCreate(savedInstanceState)
         enableEdgeToEdge()
 
-        // Initialize UserViewModel using the factory
-        // Ensure UserRepositoryImpl and UserViewModelFactory are correctly set up.
-        val userRepository = UserRepositoryImpl(applicationContext)
+        val userRepository = UserRepositoryImpl() // Assuming no context needed for Impl
         val factory = UserViewModelFactory(userRepository)
         userViewModel = ViewModelProvider(this, factory)[UserViewModel::class.java]
 
         setContent {
             PetAdoptionManagementTheme {
-                val activityContext = LocalContext.current // Get context for Intents
+                val currentActivity = this@SignUpActivity // Get a reference to the Activity
 
-                // Observe isLoggedIn from ViewModel to navigate after successful signup/login
                 val isLoggedIn by userViewModel.isLoggedIn.observeAsState(initial = false)
                 val message by userViewModel.message.observeAsState(initial = "")
 
-                // Effect for displaying messages (success/failure)
                 LaunchedEffect(message) {
                     if (message.isNotBlank()) {
-                        Toast.makeText(activityContext, message, Toast.LENGTH_SHORT).show()
-                        // Optionally clear the message after showing if ViewModel has clearMessage()
-                        // userViewModel.clearMessage()
+                        Toast.makeText(currentActivity, message, Toast.LENGTH_SHORT).show()
+                        // userViewModel.clearMessage() // Consider calling this if appropriate
                     }
                 }
 
-                // Effect for handling navigation after successful sign-up and auto-login
-                // This logic is now within the Activity, as it handles Activity transitions.
+                // Effect for handling navigation after successful sign-up
                 LaunchedEffect(isLoggedIn) {
                     if (isLoggedIn) {
-                        Toast.makeText(activityContext, "Sign Up Successful! Welcome.", Toast.LENGTH_SHORT).show()
-                        val intent = Intent(activityContext, HomePage::class.java) // Navigate to HomePage
-                        intent.flags = Intent.FLAG_ACTIVITY_NEW_TASK or Intent.FLAG_ACTIVITY_CLEAR_TASK // Clear back stack
-                        startActivity(intent)
-                        finish() // Finish SignUpActivity
+                        Toast.makeText(currentActivity, "Sign Up Successful! Please Sign In.", Toast.LENGTH_LONG).show()
+
+                        // Navigate to SignInActivity (or your equivalent LoginActivity)
+                        val intent = Intent(currentActivity, SignInActivity::class.java)
+                        intent.flags = Intent.FLAG_ACTIVITY_NEW_TASK or Intent.FLAG_ACTIVITY_CLEAR_TASK
+                        currentActivity.startActivity(intent)
+                        currentActivity.finish() // Finish SignUpActivity
                     }
                 }
 
-                // Pass a dummy NavController for composables that expect one,
-                // or if you plan to use an internal NavHost later.
-                // For direct Activity-to-Activity navigation, it's not strictly necessary for the main call.
                 val dummyNavController = rememberNavController()
 
-                // Call the Composable function that defines the UI content
                 SignUpScreenContent(
-                    navController = dummyNavController, // Pass it down, even if its main navigation is handled by Activity
+                    navController = dummyNavController,
                     userViewModel = userViewModel,
-                    // Pass current isLoggedIn state and message from ViewModel
                     isLoading = userViewModel.isLoading.observeAsState(initial = false).value,
                     onNavigateToSignIn = {
-                        val intent = Intent(activityContext, SignInActivity::class.java)
-                        startActivity(intent)
-                        finish() // Finish SignUpActivity if moving to SignIn (optional, depends on UX)
+                        val intent = Intent(currentActivity, SignInActivity::class.java)
+                        currentActivity.startActivity(intent)
+                        // currentActivity.finish() // Decide if you want to finish SignUp when explicitly navigating to SignIn
                     },
-                    onSubmitSignUp = { username, email, password ->
-                        // This lambda calls the ViewModel's signUp function
-                        userViewModel.signUp(username, email, password) { success, msg ->
-                            // The LaunchedEffect above handles success. Errors will update `message` LiveData.
+                    onSubmitSignUp = { username, firstName, lastName, email, contact, password ->
+                        val userModel = UserModel(
+                            username = username,
+                            firstname = firstName,
+                            lastname = lastName,
+                            email = email,
+                            contact = contact
+                            // Ensure your UserModel in PetAdoptionManagement has these fields
+                        )
+                        // Assuming your UserViewModel's signUp is adapted for these params
+                        userViewModel.signUp(userModel, password) { success, msg ->
+                            // Callback logic if needed, but primary feedback is via LiveData
                         }
                     }
                 )
@@ -131,12 +125,16 @@ fun SignUpScreenContent(
     userViewModel: UserViewModel, // ViewModel for data operations
     isLoading: Boolean, // Pass isLoading state explicitly
     onNavigateToSignIn: () -> Unit, // Callback for "sign in" button
-    onSubmitSignUp: (String, String, String) -> Unit // Callback for "Create Account" button
+    // Updated onSubmitSignUp callback signature
+    onSubmitSignUp: (String, String, String, String, String, String) -> Unit // username, firstName, lastName, email, contact, password
 ) {
     val context = LocalContext.current
 
-    var username by remember { mutableStateOf("") }
+    var username by remember { mutableStateOf("") } // Retaining username as per UserModel
+    var firstName by remember { mutableStateOf("") }
+    var lastName by remember { mutableStateOf("") }
     var email by remember { mutableStateOf("") }
+    var contact by remember { mutableStateOf("") } // For phone number
     var password by remember { mutableStateOf("") }
     var confirmPassword by remember { mutableStateOf("") }
     var passwordVisible by remember { mutableStateOf(false) }
@@ -241,11 +239,51 @@ fun SignUpScreenContent(
                 )
                 Spacer(modifier = Modifier.height(20.dp))
 
-                // Username Input Field
+                // Username Input Field (retained as per UserModel)
                 TextField(
                     value = username,
                     onValueChange = { username = it },
                     label = { Text("Username", color = Color.Gray) },
+                    singleLine = true,
+                    colors = TextFieldDefaults.colors(
+                        focusedContainerColor = textFieldBackgroundColor,
+                        unfocusedContainerColor = textFieldBackgroundColor,
+                        disabledContainerColor = textFieldBackgroundColor,
+                        focusedIndicatorColor = Color.Transparent,
+                        unfocusedIndicatorColor = Color.Transparent,
+                        disabledIndicatorColor = Color.Transparent,
+                        cursorColor = Color.Black
+                    ),
+                    shape = RoundedCornerShape(12.dp),
+                    modifier = Modifier.fillMaxWidth()
+                )
+                Spacer(modifier = Modifier.height(18.dp))
+
+                // First Name Input Field
+                TextField(
+                    value = firstName,
+                    onValueChange = { firstName = it },
+                    label = { Text("First Name", color = Color.Gray) },
+                    singleLine = true,
+                    colors = TextFieldDefaults.colors(
+                        focusedContainerColor = textFieldBackgroundColor,
+                        unfocusedContainerColor = textFieldBackgroundColor,
+                        disabledContainerColor = textFieldBackgroundColor,
+                        focusedIndicatorColor = Color.Transparent,
+                        unfocusedIndicatorColor = Color.Transparent,
+                        disabledIndicatorColor = Color.Transparent,
+                        cursorColor = Color.Black
+                    ),
+                    shape = RoundedCornerShape(12.dp),
+                    modifier = Modifier.fillMaxWidth()
+                )
+                Spacer(modifier = Modifier.height(18.dp))
+
+                // Last Name Input Field
+                TextField(
+                    value = lastName,
+                    onValueChange = { lastName = it },
+                    label = { Text("Last Name", color = Color.Gray) },
                     singleLine = true,
                     colors = TextFieldDefaults.colors(
                         focusedContainerColor = textFieldBackgroundColor,
@@ -266,6 +304,26 @@ fun SignUpScreenContent(
                     value = email,
                     onValueChange = { email = it },
                     label = { Text("Email Address", color = Color.Gray) },
+                    singleLine = true,
+                    colors = TextFieldDefaults.colors(
+                        focusedContainerColor = textFieldBackgroundColor,
+                        unfocusedContainerColor = textFieldBackgroundColor,
+                        disabledContainerColor = textFieldBackgroundColor,
+                        focusedIndicatorColor = Color.Transparent,
+                        unfocusedIndicatorColor = Color.Transparent,
+                        disabledIndicatorColor = Color.Transparent,
+                        cursorColor = Color.Black
+                    ),
+                    shape = RoundedCornerShape(12.dp),
+                    modifier = Modifier.fillMaxWidth()
+                )
+                Spacer(modifier = Modifier.height(18.dp))
+
+                // Contact (Phone Number) Input Field
+                TextField(
+                    value = contact,
+                    onValueChange = { contact = it },
+                    label = { Text("Phone Number", color = Color.Gray) },
                     singleLine = true,
                     colors = TextFieldDefaults.colors(
                         focusedContainerColor = textFieldBackgroundColor,
@@ -360,15 +418,15 @@ fun SignUpScreenContent(
                 // Create Account Button
                 Button(
                     onClick = {
-                        if (username.isBlank() || email.isBlank() || password.isBlank() || confirmPassword.isBlank()) {
+                        if (username.isBlank() || firstName.isBlank() || lastName.isBlank() || email.isBlank() || contact.isBlank() || password.isBlank() || confirmPassword.isBlank()) {
                             Toast.makeText(context, "Please fill all fields.", Toast.LENGTH_SHORT).show()
                         } else if (password != confirmPassword) {
                             Toast.makeText(context, "Passwords do not match.", Toast.LENGTH_SHORT).show()
                         } else if (!termsAccepted) {
                             Toast.makeText(context, "Please accept the terms and policy.", Toast.LENGTH_SHORT).show()
                         } else {
-                            // Call the onSubmitSignUp callback, which is handled by the Activity
-                            onSubmitSignUp(username, email, password)
+                            // Call the onSubmitSignUp callback with all collected data
+                            onSubmitSignUp(username, firstName, lastName, email, contact, password)
                         }
                     },
                     modifier = Modifier
@@ -434,7 +492,8 @@ fun SignUpScreenContentPreview() {
             userViewModel = dummyUserViewModel,
             isLoading = false,
             onNavigateToSignIn = { /* Preview action */ },
-            onSubmitSignUp = { _, _, _ -> /* Preview action */ }
+            // Updated preview callback signature
+            onSubmitSignUp = { _, _, _, _, _, _ -> /* Preview action */ }
         )
     }
 }
