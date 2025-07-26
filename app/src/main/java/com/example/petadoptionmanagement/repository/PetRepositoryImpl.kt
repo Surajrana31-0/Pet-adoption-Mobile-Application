@@ -1,11 +1,20 @@
 package com.example.petadoptionmanagement.repository
 
+import android.content.Context
+import android.net.Uri
+import android.os.Handler
+import android.os.Looper
+import android.provider.OpenableColumns
+import com.cloudinary.Cloudinary
+import com.cloudinary.utils.ObjectUtils
 import com.example.petadoptionmanagement.model.PetModel
 import com.google.firebase.database.DataSnapshot
 import com.google.firebase.database.DatabaseError
 import com.google.firebase.database.DatabaseReference
 import com.google.firebase.database.FirebaseDatabase
 import com.google.firebase.database.ValueEventListener
+import java.io.InputStream
+import java.util.concurrent.Executors
 
 /**
  * Concrete implementation of PetRepository using Firebase Realtime Database.
@@ -18,6 +27,14 @@ class PetRepositoryImpl : PetRepository {
     // Get a reference to the "pets" node in your database
     // Ensure this matches the path where you want to store pet data
     private val ref: DatabaseReference = database.reference.child("pets")
+
+    private val cloudinary = Cloudinary(
+        mapOf(
+            "cloud_name" to "dd9sooenk", // Replace with your Cloudinary cloud name
+            "api_key" to "281858352367463",    // Replace with your Cloudinary API key
+            "api_secret" to "dj8vgOz6YCPGqqvQIGEa-dhQ0Ig" // Replace with your Cloudinary API secret
+        )
+    )
 
     /**
      * Adds a new pet record to Firebase.
@@ -41,6 +58,49 @@ class PetRepositoryImpl : PetRepository {
         }
     }
 
+    override fun uploadImage(context: Context, imageUri: Uri, callback: (String?) -> Unit) {
+        val executor = Executors.newSingleThreadExecutor()
+        executor.execute {
+            try {
+                val inputStream: InputStream? = context.contentResolver.openInputStream(imageUri)
+                var fileName = getFileNameFromUri(context, imageUri)
+
+                // Remove extensions from file name before upload
+                fileName = fileName?.substringBeforeLast(".") ?: "uploaded_image"
+
+                val response = cloudinary.uploader().upload(
+                    inputStream, ObjectUtils.asMap(
+                        "public_id", fileName,
+                        "resource_type", "image"
+                    )
+                )
+
+                var imageUrl = response["url"] as String?
+                imageUrl = imageUrl?.replace("http://", "https://")
+
+                // Run UI updates on the Main Thread
+                Handler(Looper.getMainLooper()).post {
+                    callback(imageUrl)
+                }
+            } catch (e: Exception) {
+                e.printStackTrace()
+                Handler(Looper.getMainLooper()).post {
+                    callback(null)
+                }
+            }
+        }
+    }
+
+    override fun getFileNameFromUri(context: Context, uri: Uri): String? {
+        // Implementation to get file name from URI (similar to ProductRepositoryImpl)
+        // Use the content resolver to query the file name
+        context.contentResolver.query(uri, null, null, null, null)?.use { cursor ->
+            val nameIndex = cursor.getColumnIndex(OpenableColumns.DISPLAY_NAME)
+            cursor.moveToFirst()
+            return cursor.getString(nameIndex)
+        }
+        return null // Placeholder
+    }
     /**
      * Fetches a single pet record by its ID from Firebase.
      */
@@ -95,11 +155,11 @@ class PetRepositoryImpl : PetRepository {
      * Updates specific fields of an existing pet record in Firebase.
      */
     override fun updatePet(
-        petId: String,
+        petID: String,
         data: MutableMap<String, Any?>,
         callback: (Boolean, String) -> Unit
     ) {
-        ref.child(petId).updateChildren(data).addOnCompleteListener { task ->
+        ref.child(petID).updateChildren(data).addOnCompleteListener { task ->
             if (task.isSuccessful) {
                 callback(true, "Pet updated successfully!")
             } else {
@@ -112,10 +172,10 @@ class PetRepositoryImpl : PetRepository {
      * Deletes a pet record from Firebase.
      */
     override fun deletePet(
-        petId: String,
+        petID: String,
         callback: (Boolean, String) -> Unit
     ) {
-        ref.child(petId).removeValue().addOnCompleteListener { task ->
+        ref.child(petID).removeValue().addOnCompleteListener { task ->
             if (task.isSuccessful) {
                 callback(true, "Pet deleted successfully!")
             } else {
