@@ -12,6 +12,7 @@ package com.example.petadoptionmanagement.model
  * @property petDescription Detailed description of the pet.
  * @property petStatus Current adoption status (e.g., Available, Adopted, Pending).
  * @property petImageUrl URL to the pet's image (will be stored in Firebase Storage).
+ * @property adoptionId Unique identifier for the adoption record, if the pet is adopted.
  */
 data class PetModel(
     var petId: String = "",
@@ -21,5 +22,6 @@ data class PetModel(
     var petAge: String = "",
     var petDescription: String = "",
     var petStatus: String = "",
-    var petImageUrl: String = ""
+    var petImageUrl: String = "",
+    var adoptionId: String? = null // Nullable, as not all pets are adopted initially
 )
