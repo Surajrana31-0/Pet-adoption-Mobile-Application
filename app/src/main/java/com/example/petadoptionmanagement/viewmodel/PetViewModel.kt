@@ -1,9 +1,11 @@
 package com.example.petadoptionmanagement.viewmodel
 
+import android.content.Context
+import android.net.Uri
+import android.util.Log
 import androidx.lifecycle.LiveData
 import androidx.lifecycle.MutableLiveData
 import androidx.lifecycle.ViewModel
-import androidx.lifecycle.viewModelScope // Import for viewModelScope
 import com.example.petadoptionmanagement.model.PetModel
 import com.example.petadoptionmanagement.repository.PetRepository
 import kotlinx.coroutines.launch // Import for launch
@@ -15,6 +17,10 @@ import kotlinx.coroutines.launch // Import for launch
  */
 class PetViewModel(private val repo: PetRepository) : ViewModel() {
 
+    fun uploadImage(context: Context, imageUri: Uri, callback: (String?) -> Unit){
+        repo.uploadImage(context,imageUri,callback)
+    }
+
     // LiveData for a single pet (e.g., when fetching by ID)
     private val _pet = MutableLiveData<PetModel?>()
     val pet: LiveData<PetModel?> get() = _pet
@@ -25,7 +31,8 @@ class PetViewModel(private val repo: PetRepository) : ViewModel() {
 
     // LiveData for indicating loading state
     private val _loading = MutableLiveData<Boolean>()
-    val loading: LiveData<Boolean> get() = _loading
+    var loading: MutableLiveData<Boolean> = _loading
+        get() = _loading // Ensure public var uses the backing field for getter
 
     // **** START OF NEW CODE ****
     // LiveData for UI messages (e.g., success/error toasts)
@@ -51,13 +58,9 @@ class PetViewModel(private val repo: PetRepository) : ViewModel() {
         petModel: PetModel,
         callback: (Boolean, String) -> Unit // You might want to remove this callback if message LiveData handles it
     ) {
-        // You'll want to use viewModelScope for coroutines if your repo methods are suspend functions
-        // For now, assuming repo.addPet handles its own threading or is synchronous for the callback
         repo.addPet(petModel) { success, msg ->
             _message.postValue(msg) // Post the message from the repository callback
-            callback(success, msg)
-            // If the callback is solely for showing a Toast, you might remove it
-            // and let the UI observe the `message` LiveData.
+            callback(success, msg) // Keep callback for now, can be refactored later
         }
     }
 
@@ -68,8 +71,7 @@ class PetViewModel(private val repo: PetRepository) : ViewModel() {
     fun getPetById(
         petID: String,
     ) {
-        // This function updates _pet, but you might also want to post a message on failure
-        repo.getPetById(petID) { success, msg, value -> // Assuming callback provides a message
+        repo.getPetById(petID) { value, success, msg -> // Adjusted order to match repo
             if (success) {
                 _pet.postValue(value)
             } else {
@@ -84,14 +86,16 @@ class PetViewModel(private val repo: PetRepository) : ViewModel() {
      */
     fun getAllPets() {
         _loading.postValue(true) // Indicate loading started
-        repo.getAllPets { success, msg, value -> // Assuming callback provides a message
+        repo.getAllPets { data, success, message -> // Adjusted to match repo
             _loading.postValue(false) // Indicate loading finished
             if (success) {
-                _allPets.postValue(value) // Post the list of pets
+                Log.d("PetViewModel", "GetAllPets successful: $message")
+                _allPets.postValue(data) // Post the list of pets
             } else {
+                Log.d("PetViewModel", "GetAllPets failed: $message")
                 _allPets.postValue(emptyList()) // Post an empty list on failure
-                _message.postValue(msg ?: "Failed to fetch pets.") // Post an error message
-            }
+                _message.postValue(message ?: "Failed to fetch pets.") // Post an error message
+            } // Added missing closing brace
         }
     }
 
