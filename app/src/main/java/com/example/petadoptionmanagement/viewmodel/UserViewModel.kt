@@ -44,7 +44,7 @@ class UserViewModel(private val userRepository: UserRepository) : ViewModel() {
         // based on Firebase Auth and Realtime Database changes.
         userRepository.observeAuthState { loggedIn, user ->
             _isLoggedIn.postValue(loggedIn) // Use postValue for updates from non-main threads
-            _currentUser.postValue(user) // Use postValue for updates from non-main threads
+            _currentUser.postValue(user)    // Use postValue for updates from non-main threads
             // Optionally, clear message if state changes to logged in or logged out
             // clearMessage() // Consider if this is desired behavior
         }
@@ -65,7 +65,7 @@ class UserViewModel(private val userRepository: UserRepository) : ViewModel() {
     ) {
         _isLoading.postValue(true)
         val userModel = UserModel(username = username, email = email) // Create UserModel for the repository
-        userRepository.signUp(userModel, password) { success, msg, user ->
+        userRepository.signUp(userModel, password) { success, msg, firebaseUser ->
             _isLoading.postValue(false)
             _message.postValue(msg) // Post message to LiveData for UI
             // The _isLoggedIn and _currentUser LiveData will be updated by observeAuthState
@@ -75,7 +75,11 @@ class UserViewModel(private val userRepository: UserRepository) : ViewModel() {
         }
     }
 
-    /**
+    fun forgetPassword(email : String, callback : (Boolean, String) ->Unit) {
+        userRepository.forgetPassword(email, callback)
+    }
+
+     /**
      * Initiates the user login process.
      * Delegates the sign-in operation to the UserRepository.
      *
@@ -127,6 +131,7 @@ class UserViewModel(private val userRepository: UserRepository) : ViewModel() {
     fun addUserToDatabase(
         userId: String, model: UserModel
     ) {
+        // The callback now only indicates success and a message.
         _isLoading.postValue(true)
         userRepository.addUserToDatabase(userId, model) { success, msg ->
             _isLoading.postValue(false)
@@ -183,23 +188,3 @@ class UserViewModel(private val userRepository: UserRepository) : ViewModel() {
     }
 }
 
-// ViewModel Factory to provide the UserRepository dependency to the ViewModel
-class UserViewModelFactory(private val userRepository: UserRepository) : ViewModelProvider.Factory {
-    override fun <T : ViewModel> create(modelClass: Class<T>): T {
-        if (modelClass.isAssignableFrom(UserViewModel::class.java)) {
-            @Suppress("UNCHECKED_CAST")
-            return UserViewModel(userRepository) as T
-        }
-        throw IllegalArgumentException("Unknown ViewModel class")
-    }
-}
-
-class PetViewModelFactory(private val petRepository: PetRepository) : ViewModelProvider.Factory {
-    override fun <T : ViewModel> create(modelClass: Class<T>): T {
-        if (modelClass.isAssignableFrom(PetViewModel::class.java)) {
-            @Suppress("UNCHECKED_CAST")
-            return PetViewModel(petRepository) as T
-        }
-        throw IllegalArgumentException("Unknown ViewModel class")
-    }
-}
