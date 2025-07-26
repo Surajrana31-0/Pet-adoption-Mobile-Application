@@ -1,5 +1,7 @@
 package com.example.petadoptionmanagement.repository
 
+import android.content.Context
+import android.net.Uri
 import com.example.petadoptionmanagement.model.PetModel
 
 /**
@@ -55,4 +57,20 @@ interface PetRepository {
         petId: String,
         callback: (Boolean, String) -> Unit
     )
+
+    /**
+     * Uploads an image to the storage.
+     * @param context The application context.
+     * @param imageUri The URI of the image to upload.
+     * @param callback A lambda function to be called with the URL of the uploaded image (or null on failure).
+     */
+    fun uploadImage(context: Context, imageUri: Uri, callback: (String?) -> Unit)
+
+    /**
+     * Retrieves the file name from a URI.
+     * @param context The application context.
+     * @param uri The URI of the file.
+     * @return The file name, or null if it cannot be determined.
+     */
+    fun getFileNameFromUri(context: Context, uri: Uri): String?
 }
