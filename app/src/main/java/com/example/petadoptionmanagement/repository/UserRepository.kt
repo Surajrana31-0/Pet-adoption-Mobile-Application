@@ -20,6 +20,17 @@ interface UserRepository {
     suspend fun createUserInAuth(email: String, password: String): FirebaseUser?
 
     /**
+     * Registers a new user with email and password and saves additional details.
+     * This combines authentication and database operations.
+     *
+     * @param email The user's email.
+     * @param password The user's password.
+     * @param userModel The UserModel containing additional details.
+     * @param callback (success: Boolean, message: String, userId: String?)
+     */
+    fun signUp(email: String, password: String, userModel: UserModel, callback: (Boolean, String, String?) -> Unit)
+
+    /**
      * Saves additional user details (like username, contact, etc.) to Cloud Firestore.
      * This is typically called after successful user creation in Firebase Authentication.
      *
@@ -72,6 +83,8 @@ interface UserRepository {
         callback: (Boolean, String, UserModel?) -> Unit
     )
 
+    fun getCurrentUser() : FirebaseUser?
+
     /**
      * Provides a mechanism to observe real-time changes in the user's authentication state
      * and fetches the corresponding UserModel from Firestore.
@@ -93,6 +106,10 @@ interface UserRepository {
         data: Map<String, Any?>, // Changed to Map from MutableMap for broader compatibility
         callback: (Boolean, String) -> Unit
     )
+
+    fun addUserToDatabase(userID : String, model: UserModel, callback: (Boolean, String) ->Unit)
+
+    fun getUserByID(userID : String, callback : (UserModel?, Boolean, String) ->Unit)
 
     // Note: The original `signUp` and `addUserToDatabase` are effectively replaced/covered by
     // `createUserInAuth`, `saveUserDetails`, and how the ViewModel now orchestrates these.

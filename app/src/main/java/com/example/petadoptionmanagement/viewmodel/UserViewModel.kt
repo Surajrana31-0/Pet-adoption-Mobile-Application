@@ -3,157 +3,95 @@ package com.example.petadoptionmanagement.viewmodel
 import androidx.lifecycle.LiveData
 import androidx.lifecycle.MutableLiveData
 import androidx.lifecycle.ViewModel
-// import androidx.lifecycle.ViewModelProvider // Not directly used in this file for instantiation
-import androidx.lifecycle.viewModelScope // Import viewModelScope
+import androidx.lifecycle.viewModelScope
 import com.example.petadoptionmanagement.model.UserModel
-// import com.example.petadoptionmanagement.repository.PetRepository // Not used in this specific UserViewModel
 import com.example.petadoptionmanagement.repository.UserRepository
 import com.google.firebase.auth.FirebaseUser
-// import com.google.firebase.auth.FirebaseAuthUserCollisionException // Example for specific error handling
-// import com.google.firebase.auth.FirebaseAuthWeakPasswordException // Example for specific error handling
-import kotlinx.coroutines.launch // Import launch from kotlinx.coroutines
+import kotlinx.coroutines.launch
 
-/**
- * ViewModel for user authentication and profile management.
- * This class handles UI-related data and logic, communicating with the UserRepository.
- */
 class UserViewModel(private val userRepository: UserRepository) : ViewModel() {
 
-    // LiveData to observe the user's login status from the UI
     private val _isLoggedIn = MutableLiveData<Boolean>()
     val isLoggedIn: LiveData<Boolean> get() = _isLoggedIn
 
-    // LiveData to observe the current logged-in user's data
     private val _currentUser = MutableLiveData<UserModel?>()
     val currentUser: LiveData<UserModel?> get() = _currentUser
 
-    // LiveData for displaying messages (success/error) to the UI
-    private val _message = MutableLiveData<String>()
-    val message: LiveData<String> get() = _message
+    private val _message = MutableLiveData<String?>() // Allow null to clear message
+    val message: LiveData<String?> get() = _message
 
-    // LiveData for loading state (e.g., show progress indicator)
     private val _isLoading = MutableLiveData<Boolean>()
     val isLoading: LiveData<Boolean> get() = _isLoading
 
-    // LiveData for a specific user retrieved from the database (e.g., for viewing other profiles)
-    // Consider renaming if this is only for one user at a time, e.g., _viewedUserProfile
-    private val _users = MutableLiveData<UserModel?>()
-    val users : LiveData<UserModel?> get() = _users
-
+    // For viewing a specific user's profile (not the currently logged-in one)
+    private val _viewedUser = MutableLiveData<UserModel?>()
+    val viewedUser: LiveData<UserModel?> get() = _viewedUser // Renamed from _users for clarity
 
     init {
-        // Start observing authentication state changes from the repository
-        // This ensures that _isLoggedIn and _currentUser are always up-to-date
-        // based on Firebase Auth and (potentially) Realtime Database/Firestore changes.
-        // Make sure your userRepository.observeAuthState correctly fetches UserModel for _currentUser
-        userRepository.observeAuthState { loggedIn, userModel -> // Assuming observeAuthState now provides UserModel
+        _isLoading.postValue(true) // Initial loading state for auth check
+        userRepository.observeAuthState { loggedIn, userModel ->
             _isLoggedIn.postValue(loggedIn)
             _currentUser.postValue(userModel)
+            _isLoading.postValue(false) // Auth state determined
             if (!loggedIn) {
-                // Optionally clear other user-specific data if user logs out
+                // Optionally clear other user-specific data, e.g., _viewedUser.postValue(null)
             }
         }
     }
 
-    /**
-     * Initiates the user registration process.
-     * Creates an account in Firebase Auth, then saves additional user details to Firestore.
-     *
-     * @param userModel The complete user model with all details from the sign-up form.
-     * @param password The password for the new account.
-     * @param callback Optional: to notify the caller (Activity/Fragment) directly.
-     *                 UI updates should primarily rely on observing LiveData (isLoggedIn, message).
-     */
-    fun signUp(userModel: UserModel, password: String, callback: ((success: Boolean, message: String) -> Unit)? = null) {
+    fun signUp(userModel: UserModel, password: String) { // Removed direct callback
         _isLoading.postValue(true)
         viewModelScope.launch {
             try {
-                // Ensure email is present in the userModel for Auth creation
                 if (userModel.email.isBlank()) {
+                    _message.postValue("Sign up failed: Email is required.")
                     _isLoading.postValue(false)
-                    val errorMsg = "Sign up failed: Email is required."
-                    _message.postValue(errorMsg)
-                    callback?.invoke(false, errorMsg)
                     return@launch
                 }
-
+                // Assuming userModel already contains uid="" or is handled by saveUserDetails
                 val firebaseUser = userRepository.createUserInAuth(userModel.email, password)
 
                 if (firebaseUser != null) {
-                    // Save additional user details (username, firstname, etc.) to Firestore
-                    // The userModel passed in should contain all these details from the form
-                    userRepository.saveUserDetails(firebaseUser.uid, userModel)
+                    // Create a new UserModel instance with the UID from FirebaseUser
+                    // if your original userModel from UI doesn't have it yet.
+                    // This is crucial if userModel passed in doesn't have a UID field or it's empty.
+                    val userToSave = if (userModel.userId.isBlank()) {
+                        userModel.copy(userId = firebaseUser.uid)
+                    } else {
+                        userModel // Assuming userModel passed in might already have UID if it's an update scenario (unlikely for sign-up)
+                    }
+                    userRepository.saveUserDetails(firebaseUser.uid, userToSave) // Use userToSave
 
-                    // _isLoggedIn will be updated by observeAuthState when Firebase Auth state changes.
-                    // If observeAuthState is quick, explicit setting here might be redundant
-                    // but can be useful for immediate feedback before listener fires.
-                    // _isLoggedIn.postValue(true) // Handled by observeAuthState
-
-                    val successMsg = "Sign up successful! Welcome."
-                    _message.postValue(successMsg) // For Toast/Snackbar in UI
-                    callback?.invoke(true, successMsg)
+                    // _isLoggedIn and _currentUser will be updated by observeAuthState
+                    _message.postValue("Sign up successful! Welcome.")
                 } else {
-                    // This case should ideally be covered by exceptions from createUserInAuth
-                    _isLoading.postValue(false)
-                    val errorMsg = "Sign up failed: Authentication entry could not be created."
-                    _message.postValue(errorMsg)
-                    callback?.invoke(false, errorMsg)
+                    _message.postValue("Sign up failed: Authentication entry could not be created.")
                 }
             } catch (e: Exception) {
-                // Example of more specific error handling:
-                // when (e) {
-                //    is FirebaseAuthUserCollisionException -> {
-                //        _message.postValue("Sign up failed: Email already in use.")
-                //    }
-                //    is FirebaseAuthWeakPasswordException -> {
-                //        _message.postValue("Sign up failed: Password is too weak.")
-                //    }
-                //    else -> {
-                //        _message.postValue("Sign up failed: ${e.message ?: "Unknown error"}")
-                //    }
-                // }
                 _isLoggedIn.postValue(false) // Ensure loggedIn state is false on error
-                val errorMsg = "Sign up failed: ${e.message ?: "An unexpected error occurred."}"
-                _message.postValue(errorMsg)
-                callback?.invoke(false, errorMsg)
+                _message.postValue("Sign up failed: ${e.message ?: "An unexpected error occurred."}")
             } finally {
-                // Only set isLoading to false if it wasn't already set by an early return or error.
-                // However, the above logic should ensure it's always set.
-                if (_isLoading.value == true) { // Ensure we only set it if it's currently true
-                    _isLoading.postValue(false)
-                }
+                _isLoading.postValue(false)
             }
         }
     }
 
-
-    fun forgetPassword(email : String, callback : (Boolean, String) ->Unit) {
-        // Assuming userRepository.forgetPassword handles _isLoading and _message,
-        // or adapt it like signUp to use viewModelScope.
+    fun signIn(email: String, password: String) { // Removed direct callback
         _isLoading.postValue(true)
-        userRepository.forgetPassword(email) { success, msg ->
-            _isLoading.postValue(false)
+        // userRepository.signIn will trigger observeAuthState which updates _isLoggedIn and _currentUser
+        userRepository.signIn(email, password) { success, msg, userModel -> // userModel comes from repo callback
+            _isLoading.postValue(false) // Set loading false after operation completes
             _message.postValue(msg)
-            callback(success, msg) // Propagate callback if still needed by UI directly
+            // If signIn callback provides userModel, observeAuthState should ideally handle setting _currentUser.
+            // If there's a delay or specific need, you could update _currentUser here too,
+            // but it might lead to two updates if observeAuthState is also quick.
+            // if (success && userModel != null) {
+            // _currentUser.postValue(userModel) // Potentially redundant if observeAuthState is effective
+            // }
         }
     }
 
-    fun signIn(email: String, password: String) {
-        // Assuming userRepository.signIn handles _isLoading and _message,
-        // and that _isLoggedIn will be updated by observeAuthState.
-        // Or adapt it like signUp to use viewModelScope for more control here.
-        _isLoading.postValue(true)
-        userRepository.signIn(email, password) { success, msg, firebaseUser -> // Assuming callback provides firebaseUser
-            _isLoading.postValue(false)
-            _message.postValue(msg)
-            // _isLoggedIn and _currentUser are updated by observeAuthState
-            // If signIn in repo also fetches UserModel, observeAuthState should handle it.
-        }
-    }
-
-    fun logout() {
-        // Assuming userRepository.signOut handles _isLoading and _message.
-        // _isLoggedIn and _currentUser will be updated by observeAuthState.
+    fun logout() { // Removed direct callback
         _isLoading.postValue(true)
         userRepository.signOut { success, msg ->
             _isLoading.postValue(false)
@@ -162,64 +100,84 @@ class UserViewModel(private val userRepository: UserRepository) : ViewModel() {
         }
     }
 
-    fun deleteAccount(userId: String) {
+    fun deleteAccount() { // Removed direct callback and userId parameter (assumes current user)
         _isLoading.postValue(true)
-        userRepository.deleteAccount(userId) { success, msg ->
+        val currentUserId = userRepository.getCurrentFirebaseUser()?.uid
+        if (currentUserId != null) {
+            userRepository.deleteAccount(currentUserId) { success, msg ->
+                _isLoading.postValue(false)
+                _message.postValue(msg)
+                // _isLoggedIn and _currentUser are updated by observeAuthState
+            }
+        } else {
             _isLoading.postValue(false)
-            _message.postValue(msg)
-            // _isLoggedIn and _currentUser are updated by observeAuthState (will become null/false)
+            _message.postValue("Cannot delete account: No user is currently logged in.")
         }
     }
 
-    /**
-     * Adds a user model to the Realtime Database/Firestore.
-     * This might be redundant if signUp already saves user details.
-     * Could be used for admin functions or if initial sign-up only creates Auth entry.
-     */
-    fun addUserToDatabase(userId: String, model: UserModel) {
+    fun forgetPassword(email: String) { // Removed direct callback
         _isLoading.postValue(true)
-        // If this is part of sign-up, ensure it's called correctly.
-        // If it's separate, its usage context is important.
-        // For consistency, consider making repository.addUserToDatabase a suspend function.
-        userRepository.addUserToDatabase(userId, model) { success, msg ->
+        userRepository.forgetPassword(email) { success, msg ->
             _isLoading.postValue(false)
             _message.postValue(msg)
-            if (success) {
-                // Optionally, re-fetch user if this updates the _currentUser
-                // userRepository.getCurrentUser { updatedUser -> _currentUser.postValue(updatedUser) }
-            }
         }
     }
 
     fun getCurrentFirebaseUser(): FirebaseUser? {
-        return userRepository.getCurrentUser()
+        return userRepository.getCurrentFirebaseUser() // Corrected method name
     }
 
-    fun editProfile(userId: String, data: MutableMap<String, Any?>) {
+    fun editProfile(userId: String, data: Map<String, Any?>) { // Changed data to Map, removed callback
         _isLoading.postValue(true)
         userRepository.editProfile(userId, data) { success, msg ->
             _isLoading.postValue(false)
             _message.postValue(msg)
             if (success) {
                 // After successful edit, trigger a re-fetch of current user to update _currentUser LiveData
-                // Ensure userRepository.getCurrentUser callback provides UserModel
-                userRepository.getCurrentUser { updatedUserModel ->
-                    _currentUser.postValue(updatedUserModel)
+                userRepository.getCurrentUserModel { updatedUserModel -> // Corrected method name
+                    _currentUser.postValue(updatedUserModel) // Update the currently logged-in user's details
                 }
             }
         }
     }
 
-    fun getUserFromDatabase(userId: String) {
+    fun getUserFromDatabase(userId: String) { // For fetching a specific user profile
         _isLoading.postValue(true)
         userRepository.getUserFromDatabase(userId) { success, message, userModel ->
             _isLoading.postValue(false)
-            _message.postValue(message)
-            _users.postValue(userModel) // For viewing specific user profiles
+            if (success) {
+                _viewedUser.postValue(userModel)
+            } else {
+                _viewedUser.postValue(null) // Clear if fetch failed
+            }
+            _message.postValue(message) // Display message regardless of success for this specific fetch
         }
     }
 
+    // This function might be redundant if your signUp process (createUserInAuth + saveUserDetails)
+    // correctly handles saving all necessary UserModel details.
+    // If you have a specific use case for adding/updating user details outside of signUp,
+    // ensure `userRepository.addUserToDatabase` exists and is implemented.
+    /*
+    fun addUserToDatabase(userId: String, model: UserModel) {
+        _isLoading.postValue(true)
+        // Make sure userRepository.addUserToDatabase is defined in your interface and implementation
+        userRepository.addUserToDatabase(userId, model) { success, msg ->
+            _isLoading.postValue(false)
+            _message.postValue(msg)
+            if (success) {
+                // If this action updates the current user, refresh it:
+                if (userId == _currentUser.value?.uid) {
+                    userRepository.getCurrentUserModel { updatedUser ->
+                        _currentUser.postValue(updatedUser)
+                    }
+                }
+            }
+        }
+    }
+    */
+
     fun clearMessage() {
-        _message.postValue("")
+        _message.postValue(null) // Set to null to indicate message has been handled
     }
 }

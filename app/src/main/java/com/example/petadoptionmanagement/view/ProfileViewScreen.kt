@@ -31,7 +31,6 @@ import androidx.navigation.compose.rememberNavController
 import coil.compose.rememberAsyncImagePainter
 import com.example.petadoptionmanagement.R // Important: Ensure R is imported for drawables
 import com.example.petadoptionmanagement.ui.theme.PetAdoptionManagementTheme
-import com.example.petadoptionmanagement.model.UserProfile // Import UserProfile from the model package
 
 class ProfileViewScreen : ComponentActivity() { // Renamed from ProfileViewActivity to ProfileViewScreen
     override fun onCreate(savedInstanceState: Bundle?) {

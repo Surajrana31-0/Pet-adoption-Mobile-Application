@@ -1,5 +1,6 @@
 package com.example.petadoptionmanagement.repository
 
+import android.content.ContentValues.TAG
 import android.util.Log
 import com.example.petadoptionmanagement.model.UserModel
 import com.google.firebase.auth.FirebaseAuth
@@ -17,7 +18,7 @@ class UserRepositoryImpl : UserRepository {
     private val firebaseAuth: FirebaseAuth = FirebaseAuth.getInstance()
     private val firestore: FirebaseFirestore = FirebaseFirestore.getInstance()
     private val usersCollection = firestore.collection("users")
-    private val TAG = "UserRepositoryImpl"
+    private val tag = "UserRepositoryImpl"
 
     override suspend fun createUserInAuth(email: String, password: String): FirebaseUser? {
         return try {
@@ -29,6 +30,38 @@ class UserRepositoryImpl : UserRepository {
         } catch (e: Exception) {
             Log.e(TAG, "Generic error creating user in Auth: ${e.message}", e)
             throw e
+        }
+    }
+
+    override fun signUp(
+        email: String,
+        password: String,
+        userModel: UserModel,
+        callback: (Boolean, String, String?) -> Unit
+    ) {
+        CoroutineScope(Dispatchers.IO).launch {
+            try {
+                val firebaseUser = createUserInAuth(email, password)
+                if (firebaseUser != null) {
+                    val userWithUid = userModel.copy(userId = firebaseUser.uid)
+                    saveUserDetails(firebaseUser.uid, userWithUid)
+                    withContext(Dispatchers.Main) {
+                        callback(true, "Sign up successful.", firebaseUser.uid)
+                    }
+                } else {
+                    withContext(Dispatchers.Main) {
+                        callback(false, "Sign up failed: Could not create user in Auth.", null)
+                    }
+                }
+            } catch (e: FirebaseAuthException) {
+                withContext(Dispatchers.Main) {
+                    callback(false, "Sign up failed: ${e.message}", null)
+                }
+            } catch (e: Exception) {
+                withContext(Dispatchers.Main) {
+                    callback(false, "Sign up failed: ${e.message}", null)
+                }
+            }
         }
     }
 
@@ -121,6 +154,10 @@ class UserRepositoryImpl : UserRepository {
         getUserFromDatabaseInternal(userId, callback)
     }
 
+    override fun getCurrentUser(): FirebaseUser? {
+        return firebaseAuth.currentUser
+    }
+
     private fun getUserFromDatabaseInternal(userId: String, callback: (Boolean, String, UserModel?) -> Unit) {
         usersCollection.document(userId).get()
             .addOnSuccessListener { documentSnapshot ->
@@ -199,6 +236,45 @@ class UserRepositoryImpl : UserRepository {
             .addOnFailureListener { e ->
                 Log.e(TAG, "Error updating profile for $userId: ${e.message}", e)
                 callback(false, "Profile update failed: ${e.message}")
+            }
+    }
+
+    override fun addUserToDatabase(
+        userID: String,
+        model: UserModel,
+        callback: (Boolean, String) -> Unit
+    ) {
+        usersCollection.document(userID).set(model)
+            .addOnSuccessListener {
+                Log.d(TAG, "User $userID added to database successfully.")
+                callback(true, "User added to database successfully.")
+            }
+            .addOnFailureListener { e ->
+                Log.e(TAG, "Error adding user $userID to database: ${e.message}", e)
+                callback(false, "Failed to add user to database: ${e.message}")
+            }
+    }
+
+    override fun getUserByID(
+        userID: String,
+        callback: (UserModel?, Boolean, String) -> Unit
+    ) {
+        usersCollection.document(userID).get()
+            .addOnSuccessListener { documentSnapshot ->
+                if (documentSnapshot.exists()) {
+                    val userModel = documentSnapshot.toObject(UserModel::class.java)
+                    if (userModel != null) {
+                        callback(userModel, true, "User data fetched successfully.")
+                    } else {
+                        callback(null, false, "Failed to parse user data.")
+                    }
+                } else {
+                    callback(null, false, "User not found in database.")
+                }
+            }
+            .addOnFailureListener { e ->
+                Log.e(TAG, "Error fetching user $userID: ${e.message}", e)
+                callback(null, false, "Error fetching user data: ${e.message}")
             }
     }
 }

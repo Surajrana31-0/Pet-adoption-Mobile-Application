@@ -73,4 +73,11 @@ interface PetRepository {
      * @return The file name, or null if it cannot be determined.
      */
     fun getFileNameFromUri(context: Context, uri: Uri): String?
+
+    /**
+     * Retrieves all pets adopted by the current user.
+     * @param callback A lambda function to be called with success status, a message, and a list of PetModel objects.
+     */
+    fun getMyAdoptedPets(callback: (Boolean, String, List<PetModel>) -> Unit)
+
 }

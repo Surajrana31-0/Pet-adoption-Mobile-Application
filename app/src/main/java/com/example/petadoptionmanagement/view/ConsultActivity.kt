@@ -35,7 +35,6 @@ import androidx.navigation.compose.rememberNavController
 import coil.compose.rememberAsyncImagePainter
 import com.example.petadoptionmanagement.R
 import com.example.petadoptionmanagement.ui.theme.PetAdoptionManagementTheme
-import com.example.petadoptionmanagement.model.UserProfile // IMPORTED UserProfile
 
 
 // Add these imports:

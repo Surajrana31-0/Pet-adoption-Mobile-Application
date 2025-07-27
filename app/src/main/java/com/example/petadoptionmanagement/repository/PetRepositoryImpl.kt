@@ -8,6 +8,7 @@ import android.provider.OpenableColumns
 import com.cloudinary.Cloudinary
 import com.cloudinary.utils.ObjectUtils
 import com.example.petadoptionmanagement.model.PetModel
+import com.google.firebase.auth.FirebaseAuth
 import com.google.firebase.database.DataSnapshot
 import com.google.firebase.database.DatabaseError
 import com.google.firebase.database.DatabaseReference
@@ -101,6 +102,35 @@ class PetRepositoryImpl : PetRepository {
         }
         return null // Placeholder
     }
+
+    override fun getMyAdoptedPets(callback: (Boolean, String, List<PetModel>) -> Unit) {
+        val currentUser = FirebaseAuth.getInstance().currentUser
+        if (currentUser == null) {
+            callback(false, "User not logged in.", emptyList())
+            return
+        }
+        val userId = currentUser.uid
+        ref.orderByChild("adopterId").equalTo(userId)
+            .addListenerForSingleValueEvent(object : ValueEventListener {
+                override fun onDataChange(snapshot: DataSnapshot) {
+                    val adoptedPets = mutableListOf<PetModel>()
+                    if (snapshot.exists()) {
+                        for (petSnapshot in snapshot.children) {
+                            val pet = petSnapshot.getValue(PetModel::class.java)
+                            pet?.let { adoptedPets.add(it) }
+                        }
+                        callback(true, "Adopted pets fetched successfully.", adoptedPets)
+                    } else {
+                        callback(true, "No pets adopted by this user.", emptyList())
+                    }
+                }
+
+                override fun onCancelled(error: DatabaseError) {
+                    callback(false, "Database error: ${error.message}", emptyList())
+                }
+            })
+    }
+
     /**
      * Fetches a single pet record by its ID from Firebase.
      */

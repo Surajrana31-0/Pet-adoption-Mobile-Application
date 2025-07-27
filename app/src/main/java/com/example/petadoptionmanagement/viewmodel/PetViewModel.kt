@@ -71,9 +71,11 @@ class PetViewModel(private val repo: PetRepository) : ViewModel() {
     fun getPetById(
         petID: String,
     ) {
-        repo.getPetById(petID) { value, success, msg -> // Adjusted order to match repo
+        _loading.postValue(true) // Indicate loading started
+        repo.getPetById(petID) { success, msg, petData ->
+            _loading.postValue(false)
             if (success) {
-                _pet.postValue(value)
+                _pet.postValue(petData)
             } else {
                 _pet.postValue(null) // Post null or handle error state if pet not found
                 _message.postValue(msg ?: "Failed to fetch pet details.") // Post an error message
@@ -86,15 +88,15 @@ class PetViewModel(private val repo: PetRepository) : ViewModel() {
      */
     fun getAllPets() {
         _loading.postValue(true) // Indicate loading started
-        repo.getAllPets { data, success, message -> // Adjusted to match repo
+        repo.getAllPets { success, msg, petsList     -> // Adjusted to match repo
             _loading.postValue(false) // Indicate loading finished
             if (success) {
-                Log.d("PetViewModel", "GetAllPets successful: $message")
-                _allPets.postValue(data) // Post the list of pets
+                Log.d("PetViewModel", "GetAllPets successful: $msg")
+                _allPets.postValue(petsList) // Post the list of pets
             } else {
-                Log.d("PetViewModel", "GetAllPets failed: $message")
+                Log.d("PetViewModel", "GetAllPets failed: $msg")
                 _allPets.postValue(emptyList()) // Post an empty list on failure
-                _message.postValue(message ?: "Failed to fetch pets.") // Post an error message
+                _message.postValue(msg ?: "Failed to fetch pets.") // Post an error message
             } // Added missing closing brace
         }
     }
