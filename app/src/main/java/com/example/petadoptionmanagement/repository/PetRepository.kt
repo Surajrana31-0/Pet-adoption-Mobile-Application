@@ -4,80 +4,27 @@ import android.content.Context
 import android.net.Uri
 import com.example.petadoptionmanagement.model.PetModel
 
-/**
- * Interface defining the contract for pet data operations.
- * This is part of the Repository layer in the MVVM architecture.
- */
 interface PetRepository {
+    fun addPet(petModel: PetModel, callback: (Boolean, String) -> Unit)
+    fun getPetById(petId: String, callback: (Boolean, String, PetModel?) -> Unit)
+    fun getAllPets(callback: (Boolean, String, List<PetModel>) -> Unit)
+    fun updatePet(petId: String, data: Map<String, Any>, callback: (Boolean, String) -> Unit)
+    fun deletePet(petId: String, callback: (Boolean, String) -> Unit)
 
-    /**
-     * Adds a new pet to the database.
-     * @param petModel The PetModel object to be added.
-     * @param callback A lambda function to be called upon completion, indicating success/failure and a message.
-     */
-    fun addPet(
-        petModel: PetModel,
-        callback: (Boolean, String) -> Unit
-    )
-
-    /**
-     * Retrieves a single pet by its ID.
-     * @param petID The unique ID of the pet to retrieve.
-     * @param callback A lambda function to be called with success status, a message, and the retrieved PetModel (or null if not found).
-     */
-    fun getPetById(
-        petID: String,
-        callback: (Boolean, String, PetModel?) -> Unit
-    )
-
-    /**
-     * Retrieves all pets from the database.
-     * @param callback A lambda function to be called with success status, a message, and a list of PetModel objects.
-     */
-    fun getAllPets(callback: (Boolean, String, List<PetModel?>) -> Unit)
-
-    /**
-     * Updates an existing pet's data.
-     * @param petId The ID of the pet to update.
-     * @param data A map containing the fields to update and their new values.
-     * @param callback A lambda function to be called upon completion, indicating success/failure and a message.
-     */
-    fun updatePet(
-        petId: String,
-        data: MutableMap<String, Any?>,
-        callback: (Boolean, String) -> Unit
-    )
-
-    /**
-     * Deletes a pet from the database.
-     * @param petId The ID of the pet to delete.
-     * @param callback A lambda function to be called upon completion, indicating success/failure and a message.
-     */
-    fun deletePet(
-        petId: String,
-        callback: (Boolean, String) -> Unit
-    )
-
-    /**
-     * Uploads an image to the storage.
-     * @param context The application context.
-     * @param imageUri The URI of the image to upload.
-     * @param callback A lambda function to be called with the URL of the uploaded image (or null on failure).
-     */
     fun uploadImage(context: Context, imageUri: Uri, callback: (String?) -> Unit)
-
-    /**
-     * Retrieves the file name from a URI.
-     * @param context The application context.
-     * @param uri The URI of the file.
-     * @return The file name, or null if it cannot be determined.
-     */
     fun getFileNameFromUri(context: Context, uri: Uri): String?
 
-    /**
-     * Retrieves all pets adopted by the current user.
-     * @param callback A lambda function to be called with success status, a message, and a list of PetModel objects.
-     */
-    fun getMyAdoptedPets(callback: (Boolean, String, List<PetModel>) -> Unit)
-
+    fun getMyAdoptedPets(userId: String, callback: (Boolean, String, List<PetModel>) -> Unit)
+    fun applyForAdoption(
+        petId: String,
+        adopterId: String,
+        applicationDetails: Map<String, Any>,
+        callback: (Boolean, String) -> Unit
+    )
+    fun updatePetAdoptionStatus(
+        petId: String,
+        newStatus: String,
+        adoptionId: String?,
+        callback: (Boolean, String) -> Unit
+    )
 }

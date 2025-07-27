@@ -18,7 +18,9 @@ import androidx.compose.material.icons.filled.Visibility
 import androidx.compose.material.icons.filled.VisibilityOff
 import androidx.compose.material3.*
 import androidx.compose.runtime.*
+import androidx.compose.runtime.getValue
 import androidx.compose.runtime.livedata.observeAsState
+import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
@@ -35,6 +37,7 @@ import androidx.compose.ui.tooling.preview.Preview
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import androidx.lifecycle.ViewModelProvider
+import androidx.lifecycle.lifecycleScope // Required for launching coroutines
 import androidx.navigation.NavController
 import androidx.navigation.compose.rememberNavController
 import com.example.petadoptionmanagement.R
@@ -42,6 +45,8 @@ import com.example.petadoptionmanagement.model.UserModel
 import com.example.petadoptionmanagement.repository.UserRepositoryImpl
 import com.example.petadoptionmanagement.ui.theme.PetAdoptionManagementTheme
 import com.example.petadoptionmanagement.viewmodel.UserViewModel
+import com.example.petadoptionmanagement.viewmodel.UserViewModelFactory
+import kotlinx.coroutines.launch // Required for launching coroutines
 
 class SignUpActivity : ComponentActivity() {
 
@@ -51,7 +56,10 @@ class SignUpActivity : ComponentActivity() {
         super.onCreate(savedInstanceState)
         enableEdgeToEdge()
 
-        val userRepository = UserRepositoryImpl() // Assuming no context needed for Impl
+        // Use 'this' (Activity context) or 'applicationContext'
+        // If UserRepositoryImpl truly needs no context, its constructor should be parameterless.
+        // For this example, I'm assuming it might need applicationContext for broader use.
+        val userRepository = UserRepositoryImpl(applicationContext)
         val factory = UserViewModelFactory(userRepository)
         userViewModel = ViewModelProvider(this, factory)[UserViewModel::class.java]
 
@@ -61,37 +69,42 @@ class SignUpActivity : ComponentActivity() {
 
                 val isLoggedIn by userViewModel.isLoggedIn.observeAsState(initial = false)
                 val message by userViewModel.message.observeAsState(initial = "")
+                // Observe isLoading state from ViewModel
+                val isLoading by userViewModel.isLoading.observeAsState(initial = false)
 
-                LaunchedEffect(message) {
-                    if (message.isNotBlank()) {
+
+                LaunchedEffect(key1 = message) { // Use key1 for clarity if only one key
+                    if (message?.isNotBlank() ?: false ) {
                         Toast.makeText(currentActivity, message, Toast.LENGTH_SHORT).show()
-                        // userViewModel.clearMessage() // Consider calling this if appropriate
+                        // Consider having a method in ViewModel to clear the message after it's shown
+                        // userViewModel.clearMessage()
                     }
                 }
 
                 // Effect for handling navigation after successful sign-up
-                LaunchedEffect(isLoggedIn) {
+                LaunchedEffect(key1 = isLoggedIn) {
                     if (isLoggedIn) {
                         Toast.makeText(currentActivity, "Sign Up Successful! Please Sign In.", Toast.LENGTH_LONG).show()
 
-                        // Navigate to SignInActivity (or your equivalent LoginActivity)
                         val intent = Intent(currentActivity, SignInActivity::class.java)
                         intent.flags = Intent.FLAG_ACTIVITY_NEW_TASK or Intent.FLAG_ACTIVITY_CLEAR_TASK
                         currentActivity.startActivity(intent)
-                        currentActivity.finish() // Finish SignUpActivity
+                        currentActivity.finish()
                     }
                 }
 
-                val dummyNavController = rememberNavController()
+                // Removed dummyNavController, as it's not used for actual navigation here.
+                // If SignUpScreenContent needs it for internal preview/layout purposes, it's fine.
+                val navControllerForPreview = rememberNavController()
 
                 SignUpScreenContent(
-                    navController = dummyNavController,
-                    userViewModel = userViewModel,
-                    isLoading = userViewModel.isLoading.observeAsState(initial = false).value,
+                    navController = navControllerForPreview, // Pass the controller
+                    userViewModel = userViewModel, // Pass the actual ViewModel instance
+                    isLoading = isLoading, // Pass the observed isLoading state
                     onNavigateToSignIn = {
                         val intent = Intent(currentActivity, SignInActivity::class.java)
                         currentActivity.startActivity(intent)
-                        // currentActivity.finish() // Decide if you want to finish SignUp when explicitly navigating to SignIn
+                        // Not finishing here allows user to go back to sign up if they clicked by mistake
                     },
                     onSubmitSignUp = { username, firstName, lastName, email, contact, password ->
                         val userModel = UserModel(
@@ -100,12 +113,19 @@ class SignUpActivity : ComponentActivity() {
                             lastname = lastName,
                             email = email,
                             contact = contact
-                            // Ensure your UserModel in PetAdoptionManagement has these fields
                         )
-                        // Assuming your UserViewModel's signUp is adapted for these params
-                        userViewModel.signUp(userModel, password) { success, msg ->
-                            // Callback logic if needed, but primary feedback is via LiveData
+                        // Call ViewModel's signUp method.
+                        // If it's a suspend function, launch it in a coroutine scope.
+                        // If it's a regular function, direct call is fine.
+                        // Assuming it might be a suspend function for modern Android dev:
+                        lifecycleScope.launch {
+                            userViewModel.signUp(userModel, password)
                         }
+                        // If signUp is NOT a suspend function:
+                        // userViewModel.signUp(userModel, password)
+
+                        // The callback is removed as feedback is handled by LiveData
+                        // and LaunchedEffect blocks.
                     }
                 )
             }
@@ -121,32 +141,29 @@ class SignUpActivity : ComponentActivity() {
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
 fun SignUpScreenContent(
-    navController: NavController, // Still needed for internal navigation (e.g., to login route if it were a NavHost)
-    userViewModel: UserViewModel, // ViewModel for data operations
-    isLoading: Boolean, // Pass isLoading state explicitly
-    onNavigateToSignIn: () -> Unit, // Callback for "sign in" button
-    // Updated onSubmitSignUp callback signature
-    onSubmitSignUp: (String, String, String, String, String, String) -> Unit // username, firstName, lastName, email, contact, password
+    navController: NavController,
+    userViewModel: UserViewModel, // Keep this to access ViewModel states if needed, or pass states directly
+    isLoading: Boolean, // Receive isLoading state
+    onNavigateToSignIn: () -> Unit,
+    onSubmitSignUp: (String, String, String, String, String, String) -> Unit
 ) {
     val context = LocalContext.current
 
-    var username by remember { mutableStateOf("") } // Retaining username as per UserModel
+    var username by remember { mutableStateOf("") }
     var firstName by remember { mutableStateOf("") }
     var lastName by remember { mutableStateOf("") }
     var email by remember { mutableStateOf("") }
-    var contact by remember { mutableStateOf("") } // For phone number
+    var contact by remember { mutableStateOf("") }
     var password by remember { mutableStateOf("") }
     var confirmPassword by remember { mutableStateOf("") }
     var passwordVisible by remember { mutableStateOf(false) }
     var confirmPasswordVisible by remember { mutableStateOf(false) }
     var termsAccepted by remember { mutableStateOf(false) }
 
-    // Define custom colors to match the image
-    val backgroundColor = Color(0xFF6B8E23) // Olive green background
-    val cardBackgroundColor = Color(0xFFDCDCDC) // Light grey for the signup card
-    val buttonColor = Color(0xFF8B4513) // Reddish-brown for the Create Account button
-    val textFieldBackgroundColor = Color(0xFFFFFFFF) // White for input fields
-
+    val backgroundColor = Color(0xFF6B8E23)
+    val cardBackgroundColor = Color(0xFFDCDCDC)
+    val buttonColor = Color(0xFF8B4513)
+    val textFieldBackgroundColor = Color(0xFFFFFFFF)
 
     Box(
         modifier = Modifier
@@ -154,7 +171,6 @@ fun SignUpScreenContent(
             .background(backgroundColor),
         contentAlignment = Alignment.Center
     ) {
-        // Top section with decorative elements: paw print icon, menu icon, and dog image
         Column(
             modifier = Modifier
                 .fillMaxWidth()
@@ -162,7 +178,6 @@ fun SignUpScreenContent(
                 .align(Alignment.TopCenter),
             horizontalAlignment = Alignment.CenterHorizontally
         ) {
-            // Header Row for the paw print icon and menu icon
             Row(
                 modifier = Modifier
                     .fillMaxWidth()
@@ -170,13 +185,11 @@ fun SignUpScreenContent(
                 horizontalArrangement = Arrangement.SpaceBetween,
                 verticalAlignment = Alignment.CenterVertically
             ) {
-                // Paw Print Icon
                 Image(
-                    painter = painterResource(id = R.drawable.paw_print), // Ensure this drawable exists
+                    painter = painterResource(id = R.drawable.paw_print),
                     contentDescription = "Paw Print Icon",
                     modifier = Modifier.size(48.dp)
                 )
-                // Menu Icon with clickable behavior
                 Icon(
                     imageVector = Icons.Default.Menu,
                     contentDescription = "Menu Icon",
@@ -189,8 +202,6 @@ fun SignUpScreenContent(
                 )
             }
             Spacer(modifier = Modifier.height(20.dp))
-
-            // Dog Image with a circular gradient background
             Box(
                 modifier = Modifier
                     .size(180.dp)
@@ -205,7 +216,7 @@ fun SignUpScreenContent(
                 contentAlignment = Alignment.BottomCenter
             ) {
                 Image(
-                    painter = painterResource(id = R.drawable.dog_image), // Ensure this drawable exists
+                    painter = painterResource(id = R.drawable.dog_image),
                     contentDescription = "Dog looking up",
                     contentScale = ContentScale.Crop,
                     modifier = Modifier
@@ -215,7 +226,6 @@ fun SignUpScreenContent(
             }
         }
 
-        // Sign Up Form Card
         Card(
             shape = RoundedCornerShape(24.dp),
             modifier = Modifier
@@ -230,7 +240,6 @@ fun SignUpScreenContent(
                     .padding(32.dp),
                 horizontalAlignment = Alignment.CenterHorizontally
             ) {
-                // "Sign Up" Title
                 Text(
                     "Sign Up",
                     fontSize = 32.sp,
@@ -239,7 +248,6 @@ fun SignUpScreenContent(
                 )
                 Spacer(modifier = Modifier.height(20.dp))
 
-                // Username Input Field (retained as per UserModel)
                 TextField(
                     value = username,
                     onValueChange = { username = it },
@@ -259,7 +267,6 @@ fun SignUpScreenContent(
                 )
                 Spacer(modifier = Modifier.height(18.dp))
 
-                // First Name Input Field
                 TextField(
                     value = firstName,
                     onValueChange = { firstName = it },
@@ -279,7 +286,6 @@ fun SignUpScreenContent(
                 )
                 Spacer(modifier = Modifier.height(18.dp))
 
-                // Last Name Input Field
                 TextField(
                     value = lastName,
                     onValueChange = { lastName = it },
@@ -299,7 +305,6 @@ fun SignUpScreenContent(
                 )
                 Spacer(modifier = Modifier.height(18.dp))
 
-                // Email Input Field
                 TextField(
                     value = email,
                     onValueChange = { email = it },
@@ -319,7 +324,6 @@ fun SignUpScreenContent(
                 )
                 Spacer(modifier = Modifier.height(18.dp))
 
-                // Contact (Phone Number) Input Field
                 TextField(
                     value = contact,
                     onValueChange = { contact = it },
@@ -339,7 +343,6 @@ fun SignUpScreenContent(
                 )
                 Spacer(modifier = Modifier.height(18.dp))
 
-                // Password Input Field with Eye Button
                 TextField(
                     value = password,
                     onValueChange = { password = it },
@@ -367,7 +370,6 @@ fun SignUpScreenContent(
                 )
                 Spacer(modifier = Modifier.height(18.dp))
 
-                // Confirm Password Input Field with Eye Button
                 TextField(
                     value = confirmPassword,
                     onValueChange = { confirmPassword = it },
@@ -395,7 +397,6 @@ fun SignUpScreenContent(
                 )
                 Spacer(modifier = Modifier.height(15.dp))
 
-                // "I accept the terms and policy" Checkbox
                 Row(
                     modifier = Modifier.fillMaxWidth(),
                     verticalAlignment = Alignment.CenterVertically,
@@ -414,8 +415,6 @@ fun SignUpScreenContent(
                 }
                 Spacer(modifier = Modifier.height(15.dp))
 
-
-                // Create Account Button
                 Button(
                     onClick = {
                         if (username.isBlank() || firstName.isBlank() || lastName.isBlank() || email.isBlank() || contact.isBlank() || password.isBlank() || confirmPassword.isBlank()) {
@@ -425,7 +424,6 @@ fun SignUpScreenContent(
                         } else if (!termsAccepted) {
                             Toast.makeText(context, "Please accept the terms and policy.", Toast.LENGTH_SHORT).show()
                         } else {
-                            // Call the onSubmitSignUp callback with all collected data
                             onSubmitSignUp(username, firstName, lastName, email, contact, password)
                         }
                     },
@@ -434,9 +432,9 @@ fun SignUpScreenContent(
                         .height(55.dp),
                     shape = RoundedCornerShape(16.dp),
                     colors = ButtonDefaults.buttonColors(containerColor = buttonColor),
-                    enabled = !isLoading // Disable button while loading
+                    enabled = !isLoading // Use the passed isLoading state
                 ) {
-                    if (isLoading) {
+                    if (isLoading) { // Use the passed isLoading state
                         CircularProgressIndicator(color = Color.White, modifier = Modifier.size(24.dp))
                     } else {
                         Text(
@@ -449,7 +447,6 @@ fun SignUpScreenContent(
                 }
                 Spacer(modifier = Modifier.height(10.dp))
 
-                // "Already a member? sign in" section
                 Row(
                     horizontalArrangement = Arrangement.Center,
                     verticalAlignment = Alignment.CenterVertically
@@ -461,7 +458,6 @@ fun SignUpScreenContent(
                     )
                     Spacer(modifier = Modifier.width(4.dp))
                     TextButton(onClick = {
-                        // Use the callback to navigate to SignIn Activity
                         onNavigateToSignIn()
                     }) {
                         Text(
@@ -483,17 +479,21 @@ fun SignUpScreenContent(
 fun SignUpScreenContentPreview() {
     PetAdoptionManagementTheme {
         val context = LocalContext.current
-        val dummyNavController = rememberNavController() // For preview only
-        val dummyUserRepository = remember { UserRepositoryImpl(context) }
-        val dummyUserViewModel = remember { UserViewModel(dummyUserRepository) }
+        val dummyNavController = rememberNavController()
+
+        // For the preview, we still need a UserRepository.
+        // If your UserRepositoryImpl(context) works standalone for basic init
+        // (e.g., doesn't crash if Firebase isn't fully available in preview), this is okay.
+        // Otherwise, a FakeUserRepository is better for previews.
+        val previewUserRepository = remember { UserRepositoryImpl(context) }
+        val previewUserViewModel = remember { UserViewModel(previewUserRepository) }
 
         SignUpScreenContent(
             navController = dummyNavController,
-            userViewModel = dummyUserViewModel,
-            isLoading = false,
-            onNavigateToSignIn = { /* Preview action */ },
-            // Updated preview callback signature
-            onSubmitSignUp = { _, _, _, _, _, _ -> /* Preview action */ }
+            userViewModel = previewUserViewModel, // Pass the preview ViewModel
+            isLoading = false, // Preview with isLoading false
+            onNavigateToSignIn = { /* Preview: Sign in clicked */ },
+            onSubmitSignUp = { _, _, _, _, _, _ -> /* Preview: Submit clicked */ }
         )
     }
 }

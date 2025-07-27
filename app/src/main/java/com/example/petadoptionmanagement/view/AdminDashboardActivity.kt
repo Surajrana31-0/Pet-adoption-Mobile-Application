@@ -1,5 +1,135 @@
 package com.example.petadoptionmanagement.view
 
+import android.content.Intent
+import android.os.Bundle
+import androidx.activity.ComponentActivity
+import androidx.activity.compose.setContent
+import androidx.compose.foundation.layout.*
+import androidx.compose.foundation.lazy.LazyColumn
+import androidx.compose.foundation.lazy.items
+import androidx.compose.material.icons.Icons
+import androidx.compose.material.icons.filled.Add
+import androidx.compose.material3.*
+import androidx.compose.runtime.*
+import androidx.compose.ui.Alignment
+import androidx.compose.ui.Modifier
+import androidx.compose.ui.platform.LocalContext
+import androidx.compose.ui.unit.dp
+import androidx.lifecycle.viewmodel.compose.viewModel
+import com.example.petadoptionmanagement.data.model.Pet
+import com.example.petadoptionmanagement.repository.PetRepositoryImpl
+import com.example.petadoptionmanagement.presentation.factory.PetViewModelFactory
+import com.example.petadoptionmanagement.viewmodel.PetViewModel
+import com.example.petadoptionmanagement.ui.theme.PetAdoptionManagementTheme
+import com.example.petadoptionmanagement.utils.Resource
+
+class AdminDashboardActivity : ComponentActivity() {
+    override fun onCreate(savedInstanceState: Bundle?) {
+        super.onCreate(savedInstanceState)
+
+        val petRepository = PetRepositoryImpl() // In a real app, use DI (Hilt)
+        val petViewModelFactory = PetViewModelFactory(petRepository)
+
+        setContent {
+            PetAdoptionManagementTheme {
+                AdminDashboardScreen(viewModel = viewModel(factory = petViewModelFactory))
+            }
+        }
+    }
+}
+
+@OptIn(ExperimentalMaterial3Api::class)
+@Composable
+fun AdminDashboardScreen(viewModel: PetViewModel) {
+    val context = LocalContext.current
+    val petState by viewModel.pets.collectAsState()
+
+    Scaffold(
+        topBar = {
+            TopAppBar(
+                title = { Text("Admin Dashboard") },
+                colors = TopAppBarDefaults.topAppBarColors(
+                    containerColor = MaterialTheme.colorScheme.primaryContainer,
+                    titleContentColor = MaterialTheme.colorScheme.primary,
+                )
+            )
+        },
+        floatingActionButton = {
+            FloatingActionButton(onClick = {
+                context.startActivity(Intent(context, AddEditPetActivity::class.java))
+            }) {
+                Icon(Icons.Default.Add, contentDescription = "Add Pet")
+            }
+        }
+    ) { paddingValues ->
+        Column(
+            modifier = Modifier
+                .fillMaxSize()
+                .padding(paddingValues)
+                .padding(16.dp)
+        ) {
+            when (val resource = petState) {
+                is Resource.Loading -> {
+                    Box(modifier = Modifier.fillMaxSize(), contentAlignment = Alignment.Center) {
+                        CircularProgressIndicator()
+                    }
+                }
+                is Resource.Success -> {
+                    val pets = resource.data
+                    if (!pets.isNullOrEmpty()) {
+                        LazyColumn(verticalArrangement = Arrangement.spacedBy(12.dp)) {
+                            items(pets) { pet ->
+                                AdminPetCard(
+                                    pet = pet,
+                                    onEdit = {
+                                        val intent = Intent(context, AddEditPetActivity::class.java).apply {
+                                            putExtra("PET_EXTRA", pet) // Make sure Pet is Parcelable
+                                        }
+                                        context.startActivity(intent)
+                                    },
+                                    onDelete = { viewModel.deletePet(pet.id) }
+                                )
+                            }
+                        }
+                    } else {
+                        Text("No pets found. Click the '+' button to add one.")
+                    }
+                }
+                is Resource.Error -> {
+                    Text(
+                        text = "Error: ${resource.message}",
+                        color = MaterialTheme.colorScheme.error
+                    )
+                }
+            }
+        }
+    }
+}
+
+@Composable
+fun AdminPetCard(pet: Pet, onEdit: () -> Unit, onDelete: () -> Unit) {
+    Card(
+        modifier = Modifier.fillMaxWidth(),
+        elevation = CardDefaults.cardElevation(defaultElevation = 2.dp)
+    ) {
+        Column(modifier = Modifier.padding(16.dp)) {
+            Text(text = pet.name, style = MaterialTheme.typography.titleLarge)
+            Spacer(modifier = Modifier.height(4.dp))
+            Text(text = "Breed: ${pet.breed}", style = MaterialTheme.typography.bodyMedium)
+            Text(text = "Age: ${pet.age}", style = MaterialTheme.typography.bodyMedium)
+            Spacer(modifier = Modifier.height(8.dp))
+            Row(horizontalArrangement = Arrangement.spacedBy(8.dp)) {
+                Button(onClick = onEdit) {
+                    Text("Edit")
+                }
+                OutlinedButton(onClick = onDelete) {
+                    Text("Delete")
+                }
+            }
+        }
+    }
+}
+
 import android.os.Bundle
 import android.widget.Toast
 import androidx.activity.ComponentActivity
@@ -78,7 +208,7 @@ class AdminDashboardActivity : ComponentActivity() {
                 // If PetRepositoryImpl needs context, change to:
                 // val petRepository = remember { PetRepositoryImpl(applicationContext) }
                 val petRepository = remember { PetRepositoryImpl() }
-                val userRepository = remember { UserRepositoryImpl() } // Correctly uses empty constructor
+                val userRepository = remember { UserRepositoryImpl(context) } // Correctly uses empty constructor
 
                 // 2. Create ViewModel Factories
                 val petViewModelFactory = remember { PetViewModelFactory(petRepository) }
@@ -508,29 +638,29 @@ fun AddEditPetScreen(
 }
 
 
-@Preview(showBackground = true)
-@Composable
-fun AdminDashboardPreview() {
-    PetAdoptionManagementTheme {
-        val navController = rememberNavController()
-        // Dummy repositories and ViewModels for preview
-        val dummyPetRepository = PetRepositoryImpl() // Assuming empty constructor
-        val dummyPetViewModel = PetViewModel(dummyPetRepository)
-
-        // For UserRepositoryImpl, if it needs context for some reason in a REAL scenario,
-        // you'd pass LocalContext.current.applicationContext.
-        // But since we confirmed yours doesn't, an empty constructor is fine for the real app
-        // and for the preview.
-        val dummyUserRepository = UserRepositoryImpl()
-        val dummyUserViewModel = UserViewModel(dummyUserRepository)
-
-        AdminMainScreen(
-            navController = navController,
-            petViewModel = dummyPetViewModel,
-            userViewModel = dummyUserViewModel
-        )
-    }
-}
+//@Preview(showBackground = true)
+//@Composable
+//fun AdminDashboardPreview() {
+//    PetAdoptionManagementTheme {
+//        val navController = rememberNavController()
+//        // Dummy repositories and ViewModels for preview
+//        val dummyPetRepository = PetRepositoryImpl() // Assuming empty constructor
+//        val dummyPetViewModel = PetViewModel(dummyPetRepository)
+//
+//        // For UserRepositoryImpl, if it needs context for some reason in a REAL scenario,
+//        // you'd pass LocalContext.current.applicationContext.
+//        // But since we confirmed yours doesn't, an empty constructor is fine for the real app
+//        // and for the preview.
+//        val dummyUserRepository = UserRepositoryImpl()
+//        val dummyUserViewModel = UserViewModel(dummyUserRepository)
+//
+//        AdminMainScreen(
+//            navController = navController,
+//            petViewModel = dummyPetViewModel,
+//            userViewModel = dummyUserViewModel
+//        )
+//    }
+//}
 
 @Preview(showBackground = true)
 @Composable

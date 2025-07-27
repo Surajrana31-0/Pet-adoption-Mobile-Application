@@ -45,7 +45,7 @@ class SplashActivity : ComponentActivity() {
             PetAdoptionManagementTheme {
                 // Initialize ViewModel here using a factory
                 // Assuming UserRepositoryImpl() does not require applicationContext
-                val userRepository = remember { UserRepositoryImpl() }
+                val userRepository = remember { UserRepositoryImpl(context) }
                 val userViewModelFactory = remember { UserViewModelFactory(userRepository) }
                 val userViewModel: UserViewModel = viewModel(factory = userViewModelFactory)
 
@@ -109,8 +109,8 @@ fun SplashScreen(userViewModel: UserViewModel) {
                 AdopterDashboardActivity::class.java
             }
         } else {
-            Log.d("SplashActivity", "User not logged in or currentUser is null. Navigating to SignInActivity.")
-            SignInActivity::class.java // Removed unnecessary 'as'
+            Log.d("SplashActivity", "User not logged in or currentUser is null. Navigating to LoginActivity.")
+            LoginActivity::class.java // Updated to use LoginActivity
         }
 
         val intent = Intent(context, targetClass).apply {

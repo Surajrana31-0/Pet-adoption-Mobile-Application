@@ -21,7 +21,7 @@ class UserViewModel(private val userRepository: UserRepository) : ViewModel() {
     val message: LiveData<String?> get() = _message
 
     private val _isLoading = MutableLiveData<Boolean>()
-    val isLoading: LiveData<Boolean> get() = _isLoading
+    val isLoading: LiveData<Boolean> = _isLoading
 
     // For viewing a specific user's profile (not the currently logged-in one)
     private val _viewedUser = MutableLiveData<UserModel?>()
@@ -82,12 +82,14 @@ class UserViewModel(private val userRepository: UserRepository) : ViewModel() {
         userRepository.signIn(email, password) { success, msg, userModel -> // userModel comes from repo callback
             _isLoading.postValue(false) // Set loading false after operation completes
             _message.postValue(msg)
-            // If signIn callback provides userModel, observeAuthState should ideally handle setting _currentUser.
-            // If there's a delay or specific need, you could update _currentUser here too,
-            // but it might lead to two updates if observeAuthState is also quick.
-            // if (success && userModel != null) {
-            // _currentUser.postValue(userModel) // Potentially redundant if observeAuthState is effective
-            // }
+            if (success && userModel != null) {
+                // If signIn callback provides userModel, observeAuthState should ideally handle setting _currentUser.
+                // If there's a delay or specific need, you could update _currentUser here too,
+                // but it might lead to two updates if observeAuthState is also quick.
+                // if (success && userModel != null) {
+                // _currentUser.postValue(userModel) // Potentially redundant if observeAuthState is effective
+                // }
+            }
         }
     }
 
