@@ -1,6 +1,6 @@
 package com.example.petadoptionmanagement.repository
 
-import android.content.ContentValues.TAG
+import android.content.ContentValues.TAG // Consider removing if TAG constant is not actually used from here
 import android.util.Log
 import com.example.petadoptionmanagement.model.UserModel
 import com.google.firebase.auth.FirebaseAuth
@@ -13,22 +13,23 @@ import kotlinx.coroutines.launch
 import kotlinx.coroutines.tasks.await
 import kotlinx.coroutines.withContext
 
-class UserRepositoryImpl : UserRepository {
+// Explicitly showing the empty constructor, though it's implicit if not defined
+class UserRepositoryImpl() : UserRepository {
 
     private val firebaseAuth: FirebaseAuth = FirebaseAuth.getInstance()
     private val firestore: FirebaseFirestore = FirebaseFirestore.getInstance()
     private val usersCollection = firestore.collection("users")
-    private val tag = "UserRepositoryImpl"
+    private val tag = "UserRepositoryImpl" // Class-level constant for logging
 
     override suspend fun createUserInAuth(email: String, password: String): FirebaseUser? {
         return try {
             val authResult = firebaseAuth.createUserWithEmailAndPassword(email, password).await()
             authResult.user
         } catch (e: FirebaseAuthException) {
-            Log.e(TAG, "Error creating user in Auth: ${e.errorCode} - ${e.message}", e)
+            Log.e(tag, "Error creating user in Auth: ${e.errorCode} - ${e.message}", e) // Use class-level tag
             throw e // Re-throw to be handled by ViewModel
         } catch (e: Exception) {
-            Log.e(TAG, "Generic error creating user in Auth: ${e.message}", e)
+            Log.e(tag, "Generic error creating user in Auth: ${e.message}", e) // Use class-level tag
             throw e
         }
     }
@@ -68,9 +69,9 @@ class UserRepositoryImpl : UserRepository {
     override suspend fun saveUserDetails(userId: String, userModel: UserModel) {
         try {
             usersCollection.document(userId).set(userModel).await()
-            Log.d(TAG, "User details saved for UID: $userId")
+            Log.d(tag, "User details saved for UID: $userId") // Use class-level tag
         } catch (e: Exception) {
-            Log.e(TAG, "Error saving user details to Firestore for UID $userId: ${e.message}", e)
+            Log.e(tag, "Error saving user details to Firestore for UID $userId: ${e.message}", e) // Use class-level tag
             throw e // Re-throw to be handled by ViewModel
         }
     }
@@ -81,13 +82,10 @@ class UserRepositoryImpl : UserRepository {
                 if (task.isSuccessful) {
                     val firebaseUser = task.result?.user
                     if (firebaseUser != null) {
-                        // Fetch UserModel from Firestore
                         getUserFromDatabaseInternal(firebaseUser.uid) { success, msg, userModel ->
                             if (success && userModel != null) {
                                 callback(true, "Sign in successful.", userModel)
                             } else {
-                                // User authenticated but details fetch failed.
-                                // You might still consider this a partial success for auth.
                                 callback(false, "Authenticated, but failed to fetch user details: $msg", null)
                             }
                         }
@@ -96,7 +94,7 @@ class UserRepositoryImpl : UserRepository {
                     }
                 } else {
                     val errorMsg = task.exception?.message ?: "Sign in failed: Unknown error."
-                    Log.w(TAG, "signInWithEmail:failure", task.exception)
+                    Log.w(tag, "signInWithEmail:failure", task.exception) // Use class-level tag
                     callback(false, errorMsg, null)
                 }
             }
@@ -107,7 +105,7 @@ class UserRepositoryImpl : UserRepository {
             firebaseAuth.signOut()
             callback(true, "Signed out successfully.")
         } catch (e: Exception) {
-            Log.e(TAG, "Error signing out: ${e.message}", e)
+            Log.e(tag, "Error signing out: ${e.message}", e) // Use class-level tag
             callback(false, "Sign out failed: ${e.message}")
         }
     }
@@ -137,15 +135,15 @@ class UserRepositoryImpl : UserRepository {
                         val userModel = documentSnapshot.toObject(UserModel::class.java)
                         callback(userModel)
                     } else {
-                        callback(null) // User exists in Auth but not in Firestore users collection
+                        callback(null)
                     }
                 }
                 .addOnFailureListener { e ->
-                    Log.e(TAG, "Error fetching current user model: ${e.message}", e)
+                    Log.e(tag, "Error fetching current user model: ${e.message}", e) // Use class-level tag
                     callback(null)
                 }
         } else {
-            callback(null) // No user logged in
+            callback(null)
         }
     }
 
@@ -154,6 +152,10 @@ class UserRepositoryImpl : UserRepository {
         getUserFromDatabaseInternal(userId, callback)
     }
 
+    // Note: I noticed you have getCurrentFirebaseUser() and getCurrentUser() doing the same thing.
+    // This is fine, just be aware. Let's keep getCurrentUser() as it's defined in your UserRepository interface (if it is).
+    // If getCurrentUser() is not in your interface, you might want to remove it or ensure it's used appropriately.
+    // For now, I'll assume it's part of the interface or intentionally duplicated.
     override fun getCurrentUser(): FirebaseUser? {
         return firebaseAuth.currentUser
     }
@@ -173,7 +175,7 @@ class UserRepositoryImpl : UserRepository {
                 }
             }
             .addOnFailureListener { e ->
-                Log.e(TAG, "Error fetching user from database $userId: ${e.message}", e)
+                Log.e(tag, "Error fetching user from database $userId: ${e.message}", e) // Use class-level tag
                 callback(false, "Error fetching user data: ${e.message}", null)
             }
     }
@@ -182,18 +184,16 @@ class UserRepositoryImpl : UserRepository {
         firebaseAuth.addAuthStateListener { auth ->
             val firebaseUser = auth.currentUser
             if (firebaseUser != null) {
-                // User is signed in, fetch their UserModel from Firestore
                 usersCollection.document(firebaseUser.uid).get()
                     .addOnSuccessListener { documentSnapshot ->
                         val userModel = documentSnapshot.toObject(UserModel::class.java)
-                        observer(true, userModel) // userModel can be null if not found in Firestore
+                        observer(true, userModel)
                     }
                     .addOnFailureListener { e ->
-                        Log.e(TAG, "observeAuthState: Error fetching user details for ${firebaseUser.uid}: ${e.message}", e)
-                        observer(true, null) // Still logged in, but details fetch failed
+                        Log.e(tag, "observeAuthState: Error fetching user details for ${firebaseUser.uid}: ${e.message}", e) // Use class-level tag
+                        observer(true, null)
                     }
             } else {
-                // User is signed out
                 observer(false, null)
             }
         }
@@ -202,22 +202,19 @@ class UserRepositoryImpl : UserRepository {
     override fun deleteAccount(userId: String, callback: (Boolean, String) -> Unit) {
         val user = firebaseAuth.currentUser
         if (user != null && user.uid == userId) {
-            // CoroutineScope to handle async operations sequentially
             CoroutineScope(Dispatchers.IO).launch {
                 try {
-                    // Step 1: Delete from Firestore
                     usersCollection.document(userId).delete().await()
-                    Log.d(TAG, "User data deleted from Firestore for UID: $userId")
+                    Log.d(tag, "User data deleted from Firestore for UID: $userId") // Use class-level tag
 
-                    // Step 2: Delete from Firebase Auth
                     user.delete().await()
-                    Log.d(TAG, "User account deleted from Firebase Auth for UID: $userId")
+                    Log.d(tag, "User account deleted from Firebase Auth for UID: $userId") // Use class-level tag
 
                     withContext(Dispatchers.Main) {
                         callback(true, "Account deleted successfully.")
                     }
                 } catch (e: Exception) {
-                    Log.e(TAG, "Error deleting account for UID $userId: ${e.message}", e)
+                    Log.e(tag, "Error deleting account for UID $userId: ${e.message}", e) // Use class-level tag
                     withContext(Dispatchers.Main) {
                         callback(false, "Failed to delete account: ${e.message}")
                     }
@@ -234,7 +231,7 @@ class UserRepositoryImpl : UserRepository {
                 callback(true, "Profile updated successfully.")
             }
             .addOnFailureListener { e ->
-                Log.e(TAG, "Error updating profile for $userId: ${e.message}", e)
+                Log.e(tag, "Error updating profile for $userId: ${e.message}", e) // Use class-level tag
                 callback(false, "Profile update failed: ${e.message}")
             }
     }
@@ -246,11 +243,11 @@ class UserRepositoryImpl : UserRepository {
     ) {
         usersCollection.document(userID).set(model)
             .addOnSuccessListener {
-                Log.d(TAG, "User $userID added to database successfully.")
+                Log.d(tag, "User $userID added to database successfully.") // Use class-level tag
                 callback(true, "User added to database successfully.")
             }
             .addOnFailureListener { e ->
-                Log.e(TAG, "Error adding user $userID to database: ${e.message}", e)
+                Log.e(tag, "Error adding user $userID to database: ${e.message}", e) // Use class-level tag
                 callback(false, "Failed to add user to database: ${e.message}")
             }
     }
@@ -273,7 +270,7 @@ class UserRepositoryImpl : UserRepository {
                 }
             }
             .addOnFailureListener { e ->
-                Log.e(TAG, "Error fetching user $userID: ${e.message}", e)
+                Log.e(tag, "Error fetching user $userID: ${e.message}", e) // Use class-level tag
                 callback(null, false, "Error fetching user data: ${e.message}")
             }
     }

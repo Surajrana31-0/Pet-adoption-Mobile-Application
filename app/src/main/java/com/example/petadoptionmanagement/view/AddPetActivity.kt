@@ -5,7 +5,6 @@ import android.widget.Toast
 import androidx.activity.ComponentActivity
 import androidx.activity.compose.setContent
 import androidx.activity.enableEdgeToEdge
-import androidx.compose.foundation.clickable
 import androidx.compose.foundation.layout.*
 import androidx.compose.foundation.lazy.LazyColumn
 import androidx.compose.foundation.shape.RoundedCornerShape
@@ -342,14 +341,14 @@ fun AddPetScreen(
                                     }
 
                                     val newPet = PetModel(
-                                        petId = "", // Firebase will generate this, or you can generate a UUID
-                                        petName = petName,
+                                        petName = petName, // Firebase will generate this, or you can generate a UUID
                                         petBreed = petBreed,
                                         petType = petType,
                                         petAge = petAge,
                                         petDescription = petDescription,
                                         petStatus = petStatus,
-                                        petImageUrl = petImageUrl // This will be the Cloudinary URL after upload
+                                        petImageUrl = petImageUrl,
+                                        // This will be the Cloudinary URL after upload
                                     )
 
                                     petViewModel.addNewPet(newPet) { success, message ->

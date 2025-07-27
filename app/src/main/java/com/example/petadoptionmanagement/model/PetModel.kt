@@ -23,5 +23,6 @@ data class PetModel(
     var petDescription: String = "",
     var petStatus: String = "",
     var petImageUrl: String = "",
-    var adoptionId: String? = null // Nullable, as not all pets are adopted initially
+    var adoptionId: String? = null, // Nullable, as not all pets are adopted initially
+    val imageUrl: String
 )

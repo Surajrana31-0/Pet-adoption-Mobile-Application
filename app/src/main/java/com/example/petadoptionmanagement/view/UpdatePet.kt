@@ -1,7 +1,6 @@
 package com.example.petadoptionmanagement.view
 
 import android.widget.Toast
-import androidx.compose.foundation.clickable
 import androidx.compose.foundation.layout.*
 import androidx.compose.foundation.lazy.LazyColumn
 import androidx.compose.foundation.shape.RoundedCornerShape
@@ -20,7 +19,6 @@ import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import androidx.navigation.NavController
 import androidx.navigation.compose.rememberNavController
-import com.example.petadoptionmanagement.model.PetModel
 import com.example.petadoptionmanagement.repository.PetRepositoryImpl
 import com.example.petadoptionmanagement.view.ui.theme.PetAdoptionManagementTheme
 import com.example.petadoptionmanagement.viewmodel.PetViewModel
