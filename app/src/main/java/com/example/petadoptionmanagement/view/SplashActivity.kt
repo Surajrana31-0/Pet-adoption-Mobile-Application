@@ -1,6 +1,5 @@
 package com.example.petadoptionmanagement.view
 
-import android.annotation.SuppressLint
 import android.content.Intent
 import android.os.Bundle
 import android.util.Log
@@ -13,9 +12,7 @@ import androidx.compose.foundation.background
 import androidx.compose.foundation.layout.*
 import androidx.compose.material3.*
 import androidx.compose.runtime.*
-import androidx.compose.runtime.getValue
-import androidx.compose.runtime.livedata.observeAsState // Added this import
-import androidx.compose.runtime.setValue
+import androidx.compose.runtime.livedata.observeAsState
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.alpha
@@ -36,19 +33,16 @@ import com.example.petadoptionmanagement.viewmodel.UserViewModel
 import com.example.petadoptionmanagement.viewmodel.UserViewModelFactory
 import kotlinx.coroutines.delay
 
-@SuppressLint("CustomSplashScreen")
 class SplashActivity : ComponentActivity() {
     override fun onCreate(savedInstanceState: Bundle?) {
         super.onCreate(savedInstanceState)
         enableEdgeToEdge()
         setContent {
             PetAdoptionManagementTheme {
-                // Initialize ViewModel here using a factory
-                // Assuming UserRepositoryImpl() does not require applicationContext
-                val userRepository = remember { UserRepositoryImpl(context) }
-                val userViewModelFactory = remember { UserViewModelFactory(userRepository) }
-                val userViewModel: UserViewModel = viewModel(factory = userViewModelFactory)
-
+                val userRepository = remember { UserRepositoryImpl(applicationContext) }
+                val userViewModel: UserViewModel = viewModel(
+                    factory = UserViewModelFactory(userRepository)
+                )
                 SplashScreen(userViewModel = userViewModel)
             }
         }
@@ -61,162 +55,168 @@ fun SplashScreen(userViewModel: UserViewModel) {
 
     var startAnimation by remember { mutableStateOf(false) }
 
+    // --- ANIMATIONS ---
     val logoScale by animateFloatAsState(
         targetValue = if (startAnimation) 1f else 0.3f,
-        animationSpec = tween(durationMillis = 800, easing = FastOutSlowInEasing),
-        label = "logo_scale_animation"
+        animationSpec = tween(900, easing = FastOutSlowInEasing), label = "logo_scale"
     )
     val logoAlpha by animateFloatAsState(
         targetValue = if (startAnimation) 1f else 0f,
-        animationSpec = tween(durationMillis = 800, delayMillis = 200, easing = FastOutSlowInEasing),
-        label = "logo_alpha_animation"
+        animationSpec = tween(900, delayMillis = 120, easing = FastOutSlowInEasing), label = "logo_alpha"
     )
     val titleAlpha by animateFloatAsState(
         targetValue = if (startAnimation) 1f else 0f,
-        animationSpec = tween(durationMillis = 600, delayMillis = 600, easing = FastOutSlowInEasing),
-        label = "title_alpha_animation"
+        animationSpec = tween(540, delayMillis = 580, easing = FastOutSlowInEasing), label = "title_alpha"
     )
     val subtitleAlpha by animateFloatAsState(
         targetValue = if (startAnimation) 1f else 0f,
-        animationSpec = tween(durationMillis = 600, delayMillis = 800, easing = FastOutSlowInEasing),
-        label = "subtitle_alpha_animation"
+        animationSpec = tween(540, delayMillis = 780, easing = FastOutSlowInEasing), label = "subtitle_alpha"
     )
     val progressAlpha by animateFloatAsState(
         targetValue = if (startAnimation) 1f else 0f,
-        animationSpec = tween(durationMillis = 400, delayMillis = 1000, easing = FastOutSlowInEasing),
-        label = "progress_alpha_animation"
+        animationSpec = tween(350, delayMillis = 1120, easing = FastOutSlowInEasing), label = "progress_alpha"
     )
 
-    // Observe LiveData from ViewModel
-    // Make sure UserViewModel exposes these LiveData objects correctly
-    val isLoggedIn by userViewModel.isLoggedIn.observeAsState(initial = false)
-    val currentUser by userViewModel.currentUser.observeAsState(initial = null)
+    // --- STATE OBSERVATION ---
+    val isLoggedIn by userViewModel.isLoggedIn.observeAsState()
+    val currentUser by userViewModel.currentUser.observeAsState()
 
-    LaunchedEffect(Unit) {
+    // --- NAVIGATION HANDLING ---
+    var navigated by remember { mutableStateOf(false) }
+    LaunchedEffect(isLoggedIn, currentUser) {
         startAnimation = true
-        delay(2500) // Animation display time
 
-        // An additional small delay to ensure LiveData observers have a chance to react
-        // to any initial state changes from the ViewModel's init block.
-        delay(500)
+        // Wait for splash animation
+        delay(2100)
 
-        val targetClass = if (isLoggedIn && currentUser != null) { // Ensure currentUser is also not null
-            if (currentUser?.role == "admin") {
-                Log.d("SplashActivity", "User is admin. Navigating to AdminDashboardActivity.")
-                AdminDashboardActivity::class.java // Corrected to AdminDashboardActivity
-            } else {
-                Log.d("SplashActivity", "User is logged in (not admin). Navigating to AdopterDashboardActivity.")
-                AdopterDashboardActivity::class.java
+        // Wait for currentUser state to be loaded (max 1.4s after animation)
+        val waitStart = System.currentTimeMillis()
+        while ((isLoggedIn == null || (isLoggedIn == true && currentUser == null)) &&
+            System.currentTimeMillis() - waitStart < 1400
+        ) {
+            delay(100)
+        }
+
+        if (!navigated) {
+            navigated = true
+            val nextActivity = when {
+                isLoggedIn == true && currentUser != null -> {
+                    when (currentUser.role.lowercase()) {
+                        "admin" -> AdminDashboardActivity::class.java
+                        "adopter" -> AdopterDashboardActivity::class.java
+                        else -> LoginActivity::class.java
+                    }
+                }
+                else -> LoginActivity::class.java
             }
-        } else {
-            Log.d("SplashActivity", "User not logged in or currentUser is null. Navigating to LoginActivity.")
-            LoginActivity::class.java // Updated to use LoginActivity
+            Log.d("SplashActivity", "Navigate to: $nextActivity, role: ${currentUser?.role}")
+            // Launch next activity
+            val intent = Intent(context, nextActivity).apply {
+                flags = Intent.FLAG_ACTIVITY_NEW_TASK or Intent.FLAG_ACTIVITY_CLEAR_TASK
+            }
+            context.startActivity(intent)
+            // Only call finish if context is still an Activity
+            (context as? ComponentActivity)?.finish()
         }
-
-        val intent = Intent(context, targetClass).apply {
-            flags = Intent.FLAG_ACTIVITY_NEW_TASK or Intent.FLAG_ACTIVITY_CLEAR_TASK
-        }
-        context.startActivity(intent)
-
-        // Finish current activity (SplashActivity)
-        (context as? ComponentActivity)?.finish()
     }
 
+    // --- DESIGN ---
     val gradientBrush = Brush.verticalGradient(
         colors = listOf(
-            Color(0xFF8A6F87), // Soft purple/grey
-            Color(0xFF5A4D59), // Deeper purple/grey
-            Color(0xFF3B333B)  // Darkest purple/grey
+            Color(0xFF8360c3),
+            Color(0xFF2ebf91)
         )
     )
 
     Box(
         modifier = Modifier
             .fillMaxSize()
-            .background(brush = gradientBrush),
+            .background(gradientBrush),
         contentAlignment = Alignment.Center
     ) {
         Column(
+            modifier = Modifier.padding(32.dp),
             horizontalAlignment = Alignment.CenterHorizontally,
-            verticalArrangement = Arrangement.Center,
-            modifier = Modifier.padding(32.dp)
+            verticalArrangement = Arrangement.Center
         ) {
             Image(
-                painter = painterResource(R.drawable.petadoptionlogo),
-                contentDescription = "Pet Adoption Logo",
+                painter = painterResource(R.drawable.petadoptionlogo), // Use your logo asset here!
+                contentDescription = "App Logo",
                 modifier = Modifier
-                    .size(160.dp)
+                    .size(155.dp)
                     .scale(logoScale)
                     .alpha(logoAlpha)
             )
-
-            Spacer(modifier = Modifier.height(24.dp))
+            Spacer(Modifier.height(26.dp))
 
             Text(
                 text = "PetConnect Adoptions",
-                fontSize = 42.sp,
-                fontWeight = FontWeight.Bold,
+                fontSize = 40.sp,
+                fontWeight = FontWeight.ExtraBold,
                 color = Color.White,
                 textAlign = TextAlign.Center,
                 modifier = Modifier.alpha(titleAlpha)
             )
 
-            Spacer(modifier = Modifier.height(8.dp))
+            Spacer(Modifier.height(10.dp))
 
             Text(
                 text = "Connecting Hearts, One Paw at a Time",
-                fontSize = 18.sp,
-                fontWeight = FontWeight.Medium,
-                color = Color.White.copy(alpha = 0.9f),
+                fontSize = 16.sp,
+                fontWeight = FontWeight.SemiBold,
+                color = Color.White.copy(alpha = 0.90f),
                 textAlign = TextAlign.Center,
-                modifier = Modifier.alpha(titleAlpha) // Assuming this should also use titleAlpha or a similar delayed alpha
+                modifier = Modifier.alpha(titleAlpha)
             )
 
-            Spacer(modifier = Modifier.height(40.dp))
+            Spacer(Modifier.height(36.dp))
 
+            // Slogan
             Text(
-                text = "Find Your Fur-ever Friend",
-                fontSize = 24.sp,
+                text = "Find Your Fur-ever Friend.",
+                fontSize = 20.sp,
                 fontWeight = FontWeight.Normal,
-                color = Color.White.copy(alpha = 0.95f),
+                color = Color.White.copy(alpha = 0.96f),
                 textAlign = TextAlign.Center,
                 modifier = Modifier.alpha(subtitleAlpha)
             )
 
-            Spacer(modifier = Modifier.height(32.dp))
+            Spacer(Modifier.height(33.dp))
 
-            Column(
-                horizontalAlignment = Alignment.CenterHorizontally,
-                modifier = Modifier.alpha(progressAlpha)
-            ) {
-                CircularProgressIndicator(
-                    color = Color.White,
-                    strokeWidth = 3.dp,
-                    modifier = Modifier.size(32.dp)
-                )
-
-                Spacer(modifier = Modifier.height(16.dp))
-
-                Text(
-                    text = "Loading...",
-                    fontSize = 14.sp,
-                    color = Color.White.copy(alpha = 0.8f),
-                    fontWeight = FontWeight.Light
-                )
+            // Loading spinner & text (nice fade-in)
+            if (progressAlpha > 0.02f) {
+                Column(horizontalAlignment = Alignment.CenterHorizontally) {
+                    CircularProgressIndicator(
+                        color = Color.White,
+                        strokeWidth = 4.dp,
+                        modifier = Modifier
+                            .size(34.dp)
+                            .alpha(progressAlpha)
+                    )
+                    Spacer(Modifier.height(14.dp))
+                    Text(
+                        text = "Loading...",
+                        fontSize = 16.sp,
+                        color = Color.White.copy(alpha = 0.8f),
+                        fontWeight = FontWeight.Light,
+                        modifier = Modifier.alpha(progressAlpha)
+                    )
+                }
             }
         }
 
+        // Version/footer
         Box(
             modifier = Modifier
                 .fillMaxSize()
-                .padding(24.dp),
-            contentAlignment = Alignment.BottomCenter
+                .padding(bottom = 29.dp, end = 15.dp),
+            contentAlignment = Alignment.BottomEnd
         ) {
             Text(
-                text = "v1.0.0 • Adopt, Don't Shop",
-                fontSize = 12.sp,
-                color = Color.White.copy(alpha = 0.6f),
-                modifier = Modifier.alpha(progressAlpha) // Assuming this uses progressAlpha
+                text = "v1.0.0  ⬤  Adopt, Don't Shop",
+                fontSize = 13.sp,
+                color = Color.White.copy(alpha = 0.57f),
+                modifier = Modifier.alpha(progressAlpha)
             )
         }
     }
