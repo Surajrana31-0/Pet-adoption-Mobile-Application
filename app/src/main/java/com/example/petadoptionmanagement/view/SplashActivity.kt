@@ -78,6 +78,7 @@ fun SplashScreen(userViewModel: UserViewModel) {
     )
 
     // --- STATE OBSERVATION ---
+    //Observe login and user state (Provided by live data)
     val isLoggedIn by userViewModel.isLoggedIn.observeAsState()
     val currentUser by userViewModel.currentUser.observeAsState()
 
@@ -99,23 +100,22 @@ fun SplashScreen(userViewModel: UserViewModel) {
 
         if (!navigated) {
             navigated = true
+            val user = currentUser // Assign to local
+            val role = user?.role?.lowercase() ?: ""
             val nextActivity = when {
-                isLoggedIn == true && currentUser != null -> {
-                    when (currentUser.role.lowercase()) {
+                isLoggedIn == true && user != null -> {
+                    when(role) {
                         "admin" -> AdminDashboardActivity::class.java
                         "adopter" -> AdopterDashboardActivity::class.java
-                        else -> LoginActivity::class.java
+                        else -> SignInActivity::class.java
                     }
                 }
-                else -> LoginActivity::class.java
+                else -> SignInActivity::class.java
             }
-            Log.d("SplashActivity", "Navigate to: $nextActivity, role: ${currentUser?.role}")
-            // Launch next activity
             val intent = Intent(context, nextActivity).apply {
                 flags = Intent.FLAG_ACTIVITY_NEW_TASK or Intent.FLAG_ACTIVITY_CLEAR_TASK
             }
             context.startActivity(intent)
-            // Only call finish if context is still an Activity
             (context as? ComponentActivity)?.finish()
         }
     }

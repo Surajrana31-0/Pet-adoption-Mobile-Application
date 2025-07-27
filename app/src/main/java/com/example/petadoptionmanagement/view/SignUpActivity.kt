@@ -13,14 +13,11 @@ import androidx.compose.foundation.layout.*
 import androidx.compose.foundation.shape.CircleShape
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.material.icons.Icons
-import androidx.compose.material.icons.filled.Menu
 import androidx.compose.material.icons.filled.Visibility
 import androidx.compose.material.icons.filled.VisibilityOff
 import androidx.compose.material3.*
 import androidx.compose.runtime.*
-import androidx.compose.runtime.getValue
 import androidx.compose.runtime.livedata.observeAsState
-import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
@@ -33,120 +30,33 @@ import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.input.PasswordVisualTransformation
 import androidx.compose.ui.text.input.VisualTransformation
 import androidx.compose.ui.text.style.TextDecoration
-import androidx.compose.ui.tooling.preview.Preview
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
-import androidx.lifecycle.ViewModelProvider
-import androidx.lifecycle.lifecycleScope // Required for launching coroutines
-import androidx.navigation.NavController
-import androidx.navigation.compose.rememberNavController
+import androidx.lifecycle.viewmodel.compose.viewModel
 import com.example.petadoptionmanagement.R
 import com.example.petadoptionmanagement.model.UserModel
 import com.example.petadoptionmanagement.repository.UserRepositoryImpl
 import com.example.petadoptionmanagement.ui.theme.PetAdoptionManagementTheme
 import com.example.petadoptionmanagement.viewmodel.UserViewModel
 import com.example.petadoptionmanagement.viewmodel.UserViewModelFactory
-import kotlinx.coroutines.launch // Required for launching coroutines
+import kotlinx.coroutines.launch
 
 class SignUpActivity : ComponentActivity() {
-
-    private lateinit var userViewModel: UserViewModel
-
     override fun onCreate(savedInstanceState: Bundle?) {
         super.onCreate(savedInstanceState)
         enableEdgeToEdge()
-
-        // Use 'this' (Activity context) or 'applicationContext'
-        // If UserRepositoryImpl truly needs no context, its constructor should be parameterless.
-        // For this example, I'm assuming it might need applicationContext for broader use.
-        val userRepository = UserRepositoryImpl(applicationContext)
-        val factory = UserViewModelFactory(userRepository)
-        userViewModel = ViewModelProvider(this, factory)[UserViewModel::class.java]
-
         setContent {
             PetAdoptionManagementTheme {
-                val currentActivity = this@SignUpActivity // Get a reference to the Activity
-
-                val isLoggedIn by userViewModel.isLoggedIn.observeAsState(initial = false)
-                val message by userViewModel.message.observeAsState(initial = "")
-                // Observe isLoading state from ViewModel
-                val isLoading by userViewModel.isLoading.observeAsState(initial = false)
-
-
-                LaunchedEffect(key1 = message) { // Use key1 for clarity if only one key
-                    if (message?.isNotBlank() ?: false ) {
-                        Toast.makeText(currentActivity, message, Toast.LENGTH_SHORT).show()
-                        // Consider having a method in ViewModel to clear the message after it's shown
-                        // userViewModel.clearMessage()
-                    }
-                }
-
-                // Effect for handling navigation after successful sign-up
-                LaunchedEffect(key1 = isLoggedIn) {
-                    if (isLoggedIn) {
-                        Toast.makeText(currentActivity, "Sign Up Successful! Please Sign In.", Toast.LENGTH_LONG).show()
-
-                        val intent = Intent(currentActivity, SignInActivity::class.java)
-                        intent.flags = Intent.FLAG_ACTIVITY_NEW_TASK or Intent.FLAG_ACTIVITY_CLEAR_TASK
-                        currentActivity.startActivity(intent)
-                        currentActivity.finish()
-                    }
-                }
-
-                // Removed dummyNavController, as it's not used for actual navigation here.
-                // If SignUpScreenContent needs it for internal preview/layout purposes, it's fine.
-                val navControllerForPreview = rememberNavController()
-
-                SignUpScreenContent(
-                    navController = navControllerForPreview, // Pass the controller
-                    userViewModel = userViewModel, // Pass the actual ViewModel instance
-                    isLoading = isLoading, // Pass the observed isLoading state
-                    onNavigateToSignIn = {
-                        val intent = Intent(currentActivity, SignInActivity::class.java)
-                        currentActivity.startActivity(intent)
-                        // Not finishing here allows user to go back to sign up if they clicked by mistake
-                    },
-                    onSubmitSignUp = { username, firstName, lastName, email, contact, password ->
-                        val userModel = UserModel(
-                            username = username,
-                            firstname = firstName,
-                            lastname = lastName,
-                            email = email,
-                            contact = contact
-                        )
-                        // Call ViewModel's signUp method.
-                        // If it's a suspend function, launch it in a coroutine scope.
-                        // If it's a regular function, direct call is fine.
-                        // Assuming it might be a suspend function for modern Android dev:
-                        lifecycleScope.launch {
-                            userViewModel.signUp(userModel, password)
-                        }
-                        // If signUp is NOT a suspend function:
-                        // userViewModel.signUp(userModel, password)
-
-                        // The callback is removed as feedback is handled by LiveData
-                        // and LaunchedEffect blocks.
-                    }
-                )
+                val userRepository = remember { UserRepositoryImpl(applicationContext) }
+                val userViewModel: UserViewModel = viewModel(factory = UserViewModelFactory(userRepository))
+                SignUpScreen(userViewModel = userViewModel)
             }
         }
     }
 }
 
-/**
- * SignUpScreenContent: This is the Composable function that builds the actual UI for the sign-up form.
- * It's designed to be reusable and display the UI, while the hosting Activity/Fragment
- * manages its lifecycle and data (via ViewModel).
- */
-@OptIn(ExperimentalMaterial3Api::class)
 @Composable
-fun SignUpScreenContent(
-    navController: NavController,
-    userViewModel: UserViewModel, // Keep this to access ViewModel states if needed, or pass states directly
-    isLoading: Boolean, // Receive isLoading state
-    onNavigateToSignIn: () -> Unit,
-    onSubmitSignUp: (String, String, String, String, String, String) -> Unit
-) {
+fun SignUpScreen(userViewModel: UserViewModel) {
     val context = LocalContext.current
 
     var username by remember { mutableStateOf("") }
@@ -160,308 +70,213 @@ fun SignUpScreenContent(
     var confirmPasswordVisible by remember { mutableStateOf(false) }
     var termsAccepted by remember { mutableStateOf(false) }
 
-    val backgroundColor = Color(0xFF6B8E23)
-    val cardBackgroundColor = Color(0xFFDCDCDC)
-    val buttonColor = Color(0xFF8B4513)
-    val textFieldBackgroundColor = Color(0xFFFFFFFF)
+    val isLoading by userViewModel.isLoading.observeAsState(false)
+    val isLoggedIn by userViewModel.isLoggedIn.observeAsState(false)
+    val message by userViewModel.message.observeAsState(initial = "")
+
+    // Handle post-signup navigation
+    LaunchedEffect(isLoggedIn) {
+        if (isLoggedIn) {
+            Toast.makeText(context, "Sign Up Successful! Please Sign In.", Toast.LENGTH_LONG).show()
+            val signInIntent = Intent(context, SignInActivity::class.java)
+            signInIntent.flags = Intent.FLAG_ACTIVITY_NEW_TASK or Intent.FLAG_ACTIVITY_CLEAR_TASK
+            context.startActivity(signInIntent)
+            (context as? ComponentActivity)?.finish()
+        }
+    }
+    LaunchedEffect(message) {
+        if (message?.isNotBlank() == true) {
+            Toast.makeText(context, message, Toast.LENGTH_SHORT).show()
+            userViewModel.clearMessage()
+        }
+    }
+
+    val backgroundBrush = Brush.verticalGradient(
+        colors = listOf(Color(0xFF6B8E23), Color(0xFFDCDCDC))
+    )
 
     Box(
         modifier = Modifier
             .fillMaxSize()
-            .background(backgroundColor),
+            .background(backgroundBrush),
         contentAlignment = Alignment.Center
     ) {
-        Column(
-            modifier = Modifier
-                .fillMaxWidth()
-                .padding(top = 24.dp)
-                .align(Alignment.TopCenter),
-            horizontalAlignment = Alignment.CenterHorizontally
-        ) {
-            Row(
-                modifier = Modifier
-                    .fillMaxWidth()
-                    .padding(horizontal = 24.dp),
-                horizontalArrangement = Arrangement.SpaceBetween,
-                verticalAlignment = Alignment.CenterVertically
-            ) {
-                Image(
-                    painter = painterResource(id = R.drawable.paw_print),
-                    contentDescription = "Paw Print Icon",
-                    modifier = Modifier.size(48.dp)
-                )
-                Icon(
-                    imageVector = Icons.Default.Menu,
-                    contentDescription = "Menu Icon",
-                    tint = Color.White,
-                    modifier = Modifier
-                        .size(36.dp)
-                        .clickable {
-                            Toast.makeText(context, "Menu icon clicked!", Toast.LENGTH_SHORT).show()
-                        }
-                )
-            }
-            Spacer(modifier = Modifier.height(20.dp))
-            Box(
-                modifier = Modifier
-                    .size(180.dp)
-                    .clip(CircleShape)
-                    .background(
-                        Brush.verticalGradient(
-                            colors = listOf(Color(0xFF8B0000), Color(0xFFD3D3D3)),
-                            startY = 0f,
-                            endY = 250f
-                        )
-                    ),
-                contentAlignment = Alignment.BottomCenter
-            ) {
-                Image(
-                    painter = painterResource(id = R.drawable.dog_image),
-                    contentDescription = "Dog looking up",
-                    contentScale = ContentScale.Crop,
-                    modifier = Modifier
-                        .fillMaxWidth()
-                        .height(200.dp)
-                )
-            }
-        }
-
         Card(
-            shape = RoundedCornerShape(24.dp),
+            shape = RoundedCornerShape(28.dp),
             modifier = Modifier
-                .fillMaxWidth(0.9f)
-                .align(Alignment.Center)
-                .offset(y = 120.dp),
-            colors = CardDefaults.cardColors(containerColor = cardBackgroundColor),
+                .fillMaxWidth(0.92f)
+                .padding(20.dp),
+            colors = CardDefaults.cardColors(containerColor = Color(0xFFF6F6F6)),
             elevation = CardDefaults.cardElevation(defaultElevation = 8.dp)
         ) {
             Column(
-                modifier = Modifier
-                    .padding(32.dp),
+                modifier = Modifier.padding(28.dp),
                 horizontalAlignment = Alignment.CenterHorizontally
             ) {
-                Text(
-                    "Sign Up",
-                    fontSize = 32.sp,
-                    fontWeight = FontWeight.Bold,
-                    color = Color.Black
-                )
-                Spacer(modifier = Modifier.height(20.dp))
+                Text("Create Account", fontSize = 30.sp, fontWeight = FontWeight.Bold, color = Color(0xFF454444))
+                Spacer(modifier = Modifier.height(23.dp))
 
-                TextField(
-                    value = username,
-                    onValueChange = { username = it },
-                    label = { Text("Username", color = Color.Gray) },
+                // Username
+                OutlinedTextField(
+                    value = username, onValueChange = { username = it },
+                    label = { Text("Username") },
                     singleLine = true,
-                    colors = TextFieldDefaults.colors(
-                        focusedContainerColor = textFieldBackgroundColor,
-                        unfocusedContainerColor = textFieldBackgroundColor,
-                        disabledContainerColor = textFieldBackgroundColor,
-                        focusedIndicatorColor = Color.Transparent,
-                        unfocusedIndicatorColor = Color.Transparent,
-                        disabledIndicatorColor = Color.Transparent,
-                        cursorColor = Color.Black
-                    ),
-                    shape = RoundedCornerShape(12.dp),
+                    enabled = !isLoading,
                     modifier = Modifier.fillMaxWidth()
                 )
-                Spacer(modifier = Modifier.height(18.dp))
+                Spacer(modifier = Modifier.height(14.dp))
 
-                TextField(
-                    value = firstName,
-                    onValueChange = { firstName = it },
-                    label = { Text("First Name", color = Color.Gray) },
+                // First Name
+                OutlinedTextField(
+                    value = firstName, onValueChange = { firstName = it },
+                    label = { Text("First Name") },
                     singleLine = true,
-                    colors = TextFieldDefaults.colors(
-                        focusedContainerColor = textFieldBackgroundColor,
-                        unfocusedContainerColor = textFieldBackgroundColor,
-                        disabledContainerColor = textFieldBackgroundColor,
-                        focusedIndicatorColor = Color.Transparent,
-                        unfocusedIndicatorColor = Color.Transparent,
-                        disabledIndicatorColor = Color.Transparent,
-                        cursorColor = Color.Black
-                    ),
-                    shape = RoundedCornerShape(12.dp),
+                    enabled = !isLoading,
                     modifier = Modifier.fillMaxWidth()
                 )
-                Spacer(modifier = Modifier.height(18.dp))
+                Spacer(modifier = Modifier.height(14.dp))
 
-                TextField(
-                    value = lastName,
-                    onValueChange = { lastName = it },
-                    label = { Text("Last Name", color = Color.Gray) },
+                // Last Name
+                OutlinedTextField(
+                    value = lastName, onValueChange = { lastName = it },
+                    label = { Text("Last Name") },
                     singleLine = true,
-                    colors = TextFieldDefaults.colors(
-                        focusedContainerColor = textFieldBackgroundColor,
-                        unfocusedContainerColor = textFieldBackgroundColor,
-                        disabledContainerColor = textFieldBackgroundColor,
-                        focusedIndicatorColor = Color.Transparent,
-                        unfocusedIndicatorColor = Color.Transparent,
-                        disabledIndicatorColor = Color.Transparent,
-                        cursorColor = Color.Black
-                    ),
-                    shape = RoundedCornerShape(12.dp),
+                    enabled = !isLoading,
                     modifier = Modifier.fillMaxWidth()
                 )
-                Spacer(modifier = Modifier.height(18.dp))
+                Spacer(modifier = Modifier.height(14.dp))
 
-                TextField(
-                    value = email,
-                    onValueChange = { email = it },
-                    label = { Text("Email Address", color = Color.Gray) },
+                // Email
+                OutlinedTextField(
+                    value = email, onValueChange = { email = it },
+                    label = { Text("Email") },
                     singleLine = true,
-                    colors = TextFieldDefaults.colors(
-                        focusedContainerColor = textFieldBackgroundColor,
-                        unfocusedContainerColor = textFieldBackgroundColor,
-                        disabledContainerColor = textFieldBackgroundColor,
-                        focusedIndicatorColor = Color.Transparent,
-                        unfocusedIndicatorColor = Color.Transparent,
-                        disabledIndicatorColor = Color.Transparent,
-                        cursorColor = Color.Black
-                    ),
-                    shape = RoundedCornerShape(12.dp),
+                    enabled = !isLoading,
                     modifier = Modifier.fillMaxWidth()
                 )
-                Spacer(modifier = Modifier.height(18.dp))
+                Spacer(modifier = Modifier.height(14.dp))
 
-                TextField(
-                    value = contact,
-                    onValueChange = { contact = it },
-                    label = { Text("Phone Number", color = Color.Gray) },
+                // Contact/Phone
+                OutlinedTextField(
+                    value = contact, onValueChange = { contact = it },
+                    label = { Text("Contact Number") },
                     singleLine = true,
-                    colors = TextFieldDefaults.colors(
-                        focusedContainerColor = textFieldBackgroundColor,
-                        unfocusedContainerColor = textFieldBackgroundColor,
-                        disabledContainerColor = textFieldBackgroundColor,
-                        focusedIndicatorColor = Color.Transparent,
-                        unfocusedIndicatorColor = Color.Transparent,
-                        disabledIndicatorColor = Color.Transparent,
-                        cursorColor = Color.Black
-                    ),
-                    shape = RoundedCornerShape(12.dp),
+                    enabled = !isLoading,
                     modifier = Modifier.fillMaxWidth()
                 )
-                Spacer(modifier = Modifier.height(18.dp))
+                Spacer(modifier = Modifier.height(14.dp))
 
-                TextField(
-                    value = password,
-                    onValueChange = { password = it },
-                    label = { Text("Password", color = Color.Gray) },
+                // Password
+                OutlinedTextField(
+                    value = password, onValueChange = { password = it },
+                    label = { Text("Password") },
                     singleLine = true,
+                    enabled = !isLoading,
                     visualTransformation = if (passwordVisible) VisualTransformation.None else PasswordVisualTransformation(),
-                    colors = TextFieldDefaults.colors(
-                        focusedContainerColor = textFieldBackgroundColor,
-                        unfocusedContainerColor = textFieldBackgroundColor,
-                        disabledContainerColor = textFieldBackgroundColor,
-                        focusedIndicatorColor = Color.Transparent,
-                        unfocusedIndicatorColor = Color.Transparent,
-                        disabledIndicatorColor = Color.Transparent,
-                        cursorColor = Color.Black
-                    ),
-                    shape = RoundedCornerShape(12.dp),
-                    modifier = Modifier.fillMaxWidth(),
                     trailingIcon = {
-                        val image = if (passwordVisible) Icons.Filled.Visibility else Icons.Filled.VisibilityOff
-                        val description = if (passwordVisible) "Hide password" else "Show password"
+                        val icon = if (passwordVisible) Icons.Filled.Visibility else Icons.Filled.VisibilityOff
                         IconButton(onClick = { passwordVisible = !passwordVisible }) {
-                            Icon(imageVector = image, contentDescription = description)
+                            Icon(icon, contentDescription = if (passwordVisible) "Hide" else "Show")
                         }
-                    }
+                    },
+                    modifier = Modifier.fillMaxWidth()
                 )
-                Spacer(modifier = Modifier.height(18.dp))
+                Spacer(modifier = Modifier.height(14.dp))
 
-                TextField(
-                    value = confirmPassword,
-                    onValueChange = { confirmPassword = it },
-                    label = { Text("Confirm Password", color = Color.Gray) },
+                // Confirm Password
+                OutlinedTextField(
+                    value = confirmPassword, onValueChange = { confirmPassword = it },
+                    label = { Text("Confirm Password") },
                     singleLine = true,
+                    enabled = !isLoading,
                     visualTransformation = if (confirmPasswordVisible) VisualTransformation.None else PasswordVisualTransformation(),
-                    colors = TextFieldDefaults.colors(
-                        focusedContainerColor = textFieldBackgroundColor,
-                        unfocusedContainerColor = textFieldBackgroundColor,
-                        disabledContainerColor = textFieldBackgroundColor,
-                        focusedIndicatorColor = Color.Transparent,
-                        unfocusedIndicatorColor = Color.Transparent,
-                        disabledIndicatorColor = Color.Transparent,
-                        cursorColor = Color.Black
-                    ),
-                    shape = RoundedCornerShape(12.dp),
-                    modifier = Modifier.fillMaxWidth(),
                     trailingIcon = {
-                        val image = if (confirmPasswordVisible) Icons.Filled.Visibility else Icons.Filled.VisibilityOff
-                        val description = if (confirmPasswordVisible) "Hide confirm password" else "Show confirm password"
+                        val icon = if (confirmPasswordVisible) Icons.Filled.Visibility else Icons.Filled.VisibilityOff
                         IconButton(onClick = { confirmPasswordVisible = !confirmPasswordVisible }) {
-                            Icon(imageVector = image, contentDescription = description)
+                            Icon(icon, contentDescription = if (confirmPasswordVisible) "Hide" else "Show")
                         }
-                    }
+                    },
+                    modifier = Modifier.fillMaxWidth()
                 )
-                Spacer(modifier = Modifier.height(15.dp))
+                Spacer(modifier = Modifier.height(10.dp))
 
                 Row(
-                    modifier = Modifier.fillMaxWidth(),
                     verticalAlignment = Alignment.CenterVertically,
-                    horizontalArrangement = Arrangement.Center
+                    horizontalArrangement = Arrangement.Start
                 ) {
                     Checkbox(
                         checked = termsAccepted,
                         onCheckedChange = { termsAccepted = it },
-                        colors = CheckboxDefaults.colors(checkedColor = buttonColor)
+                        enabled = !isLoading
                     )
                     Text(
-                        "I accept the terms and policy",
+                        text = "I accept the Terms & Policy",
+                        color = Color.DarkGray,
                         fontSize = 15.sp,
-                        color = Color.DarkGray
+                        modifier = Modifier.clickable(enabled = !isLoading) { termsAccepted = !termsAccepted }
                     )
                 }
-                Spacer(modifier = Modifier.height(15.dp))
+                Spacer(modifier = Modifier.height(21.dp))
 
                 Button(
                     onClick = {
-                        if (username.isBlank() || firstName.isBlank() || lastName.isBlank() || email.isBlank() || contact.isBlank() || password.isBlank() || confirmPassword.isBlank()) {
-                            Toast.makeText(context, "Please fill all fields.", Toast.LENGTH_SHORT).show()
-                        } else if (password != confirmPassword) {
-                            Toast.makeText(context, "Passwords do not match.", Toast.LENGTH_SHORT).show()
-                        } else if (!termsAccepted) {
-                            Toast.makeText(context, "Please accept the terms and policy.", Toast.LENGTH_SHORT).show()
-                        } else {
-                            onSubmitSignUp(username, firstName, lastName, email, contact, password)
+                        when {
+                            username.isBlank() || firstName.isBlank() || lastName.isBlank() ||
+                                    email.isBlank() || contact.isBlank() || password.isBlank() ||
+                                    confirmPassword.isBlank() -> {
+                                Toast.makeText(context, "Please fill all fields.", Toast.LENGTH_SHORT).show()
+                            }
+                            password != confirmPassword -> {
+                                Toast.makeText(context, "Passwords do not match.", Toast.LENGTH_SHORT).show()
+                            }
+                            !termsAccepted -> {
+                                Toast.makeText(context, "Please accept the Terms & Policy.", Toast.LENGTH_SHORT).show()
+                            }
+                            else -> {
+                                // Default role is "adopter"; admins should register separately
+                                val userModel = UserModel(
+                                    username = username,
+                                    firstname = firstName,
+                                    lastname = lastName,
+                                    contact = contact,
+                                    email = email,
+                                    role = "adopter"
+                                )
+                                userViewModel.signUp(userModel, password)
+                            }
                         }
                     },
+                    enabled = !isLoading,
+                    shape = RoundedCornerShape(16.dp),
                     modifier = Modifier
                         .fillMaxWidth()
-                        .height(55.dp),
-                    shape = RoundedCornerShape(16.dp),
-                    colors = ButtonDefaults.buttonColors(containerColor = buttonColor),
-                    enabled = !isLoading // Use the passed isLoading state
+                        .height(54.dp)
                 ) {
-                    if (isLoading) { // Use the passed isLoading state
-                        CircularProgressIndicator(color = Color.White, modifier = Modifier.size(24.dp))
+                    if (isLoading) {
+                        CircularProgressIndicator(color = Color.White, modifier = Modifier.size(23.dp))
                     } else {
-                        Text(
-                            "Create Account",
-                            fontSize = 20.sp,
-                            fontWeight = FontWeight.SemiBold,
-                            color = Color.White
-                        )
+                        Text("Create Account", fontSize = 20.sp, fontWeight = FontWeight.SemiBold, color = Color.White)
                     }
                 }
-                Spacer(modifier = Modifier.height(10.dp))
-
+                Spacer(modifier = Modifier.height(12.dp))
                 Row(
-                    horizontalArrangement = Arrangement.Center,
-                    verticalAlignment = Alignment.CenterVertically
+                    horizontalArrangement = Arrangement.Center
                 ) {
                     Text(
-                        "Already a member?",
+                        text = "Already a member?",
                         color = Color.DarkGray,
                         fontSize = 16.sp
                     )
-                    Spacer(modifier = Modifier.width(4.dp))
-                    TextButton(onClick = {
-                        onNavigateToSignIn()
-                    }) {
+                    Spacer(modifier = Modifier.width(6.dp))
+                    TextButton(
+                        onClick = {
+                            val intent = Intent(context, SignInActivity::class.java)
+                            context.startActivity(intent)
+                            (context as? ComponentActivity)?.finish()
+                        }
+                    ) {
                         Text(
-                            "sign in",
+                            "Sign in",
                             color = Color(0xFF8B4513),
                             fontWeight = FontWeight.SemiBold,
                             fontSize = 16.sp,
@@ -471,29 +286,5 @@ fun SignUpScreenContent(
                 }
             }
         }
-    }
-}
-
-@Preview(showBackground = true)
-@Composable
-fun SignUpScreenContentPreview() {
-    PetAdoptionManagementTheme {
-        val context = LocalContext.current
-        val dummyNavController = rememberNavController()
-
-        // For the preview, we still need a UserRepository.
-        // If your UserRepositoryImpl(context) works standalone for basic init
-        // (e.g., doesn't crash if Firebase isn't fully available in preview), this is okay.
-        // Otherwise, a FakeUserRepository is better for previews.
-        val previewUserRepository = remember { UserRepositoryImpl(context) }
-        val previewUserViewModel = remember { UserViewModel(previewUserRepository) }
-
-        SignUpScreenContent(
-            navController = dummyNavController,
-            userViewModel = previewUserViewModel, // Pass the preview ViewModel
-            isLoading = false, // Preview with isLoading false
-            onNavigateToSignIn = { /* Preview: Sign in clicked */ },
-            onSubmitSignUp = { _, _, _, _, _, _ -> /* Preview: Submit clicked */ }
-        )
     }
 }

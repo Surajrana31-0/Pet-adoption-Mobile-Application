@@ -2,7 +2,6 @@ package com.example.petadoptionmanagement.view
 
 import android.content.Intent
 import android.os.Bundle
-import android.util.Log // Import Log for debugging (optional but good practice)
 import android.widget.Toast
 import androidx.activity.ComponentActivity
 import androidx.activity.compose.setContent
@@ -19,9 +18,7 @@ import androidx.compose.material.icons.filled.Visibility
 import androidx.compose.material.icons.filled.VisibilityOff
 import androidx.compose.material3.*
 import androidx.compose.runtime.*
-import androidx.compose.runtime.getValue
 import androidx.compose.runtime.livedata.observeAsState
-import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
@@ -34,14 +31,10 @@ import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.input.PasswordVisualTransformation
 import androidx.compose.ui.text.input.VisualTransformation
 import androidx.compose.ui.text.style.TextDecoration
-import androidx.compose.ui.tooling.preview.Preview
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import androidx.lifecycle.viewmodel.compose.viewModel
 import com.example.petadoptionmanagement.R
-// Make sure you have your Dashboard Activities imported, for example:
-import com.example.petadoptionmanagement.view.AdminDashboardActivity
-// import com.example.petadoptionmanagement.view.UserDashboardActivity // Or your AdopterDashboardActivity
 import com.example.petadoptionmanagement.repository.UserRepositoryImpl
 import com.example.petadoptionmanagement.ui.theme.PetAdoptionManagementTheme
 import com.example.petadoptionmanagement.viewmodel.UserViewModel
@@ -64,35 +57,25 @@ class SignInActivity : ComponentActivity() {
 @Composable
 fun SignInScreen(userViewModel: UserViewModel) {
     val context = LocalContext.current
+
     var email by remember { mutableStateOf("") }
     var password by remember { mutableStateOf("") }
     var passwordVisible by remember { mutableStateOf(false) }
 
-    val isLoggedIn by userViewModel.isLoggedIn.observeAsState(initial = false) // Simplified initial
-    val isLoading by userViewModel.isLoading.observeAsState(initial = false)  // Simplified initial
-    val message by userViewModel.message.observeAsState(initial = null)     // Initial null for clearer logic
-    val currentUser by userViewModel.currentUser.observeAsState(initial = null) // Observe currentUser
+    val isLoading by userViewModel.isLoading.observeAsState(false)
+    val isLoggedIn by userViewModel.isLoggedIn.observeAsState(false)
+    val message by userViewModel.message.observeAsState("")
+    val currentUser by userViewModel.currentUser.observeAsState(null)
 
-    val backgroundColor = Color(0xFF6B8E23)
-    val cardBackgroundColor = Color(0xFFDCDCDC)
-    val buttonColor = Color(0xFF8B4513)
-    val textFieldBackgroundColor = Color(0xFFFFFFFF)
-
-    // Effect for handling navigation after successful sign-in
-    LaunchedEffect(isLoggedIn, currentUser) { // Depend on both isLoggedIn and currentUser
+    // Handle navigation on login success with role-based routing
+    LaunchedEffect(isLoggedIn, currentUser) {
         if (isLoggedIn && currentUser != null) {
-            // User is logged in and we have user details
-            val userRole = currentUser?.role // Get the role from UserModel
-
-            Toast.makeText(context, "Sign In Successful! Role: $userRole", Toast.LENGTH_LONG).show() // Feedback with role
-
-            val intent = when (userRole?.lowercase()) { // Use lowercase for case-insensitive role matching
+            val user = currentUser // Smart-cast!
+            val role = user?.role?.lowercase() ?: ""
+            val intent = when (role) {
                 "admin" -> Intent(context, AdminDashboardActivity::class.java)
-                "user" -> Intent(context, AdopterDashboardActivity::class.java) // CHANGE THIS if your user dashboard is different
-                else -> {
-                    Log.w("SignInScreen", "Unknown or null user role: '$userRole', defaulting to User Dashboard.")
-                    Intent(context, AdopterDashboardActivity::class.java) // Default to user dashboard
-                }
+                "adopter" -> Intent(context, AdopterDashboardActivity::class.java)
+                else -> Intent(context, SignInActivity::class.java)
             }
             intent.flags = Intent.FLAG_ACTIVITY_NEW_TASK or Intent.FLAG_ACTIVITY_CLEAR_TASK
             context.startActivity(intent)
@@ -100,13 +83,19 @@ fun SignInScreen(userViewModel: UserViewModel) {
         }
     }
 
-    // Effect for displaying messages (success/failure)
+
+    // Show Toast for feedback from ViewModel
     LaunchedEffect(message) {
-        if (message?.isNotBlank() == true) { // More concise check
+        if (message?.isNotBlank() ?: false) {
             Toast.makeText(context, message, Toast.LENGTH_SHORT).show()
-            userViewModel.clearMessage() // IMPORTANT: Clear message after showing to prevent re-display
+            userViewModel.clearMessage()
         }
     }
+
+    val backgroundColor = Color(0xFF6B8E23)
+    val cardBackgroundColor = Color(0xFFDCDCDC)
+    val buttonColor = Color(0xFF8B4513)
+    val textFieldBackgroundColor = Color(0xFFFFFFFF)
 
     Box(
         modifier = Modifier
@@ -114,7 +103,6 @@ fun SignInScreen(userViewModel: UserViewModel) {
             .background(backgroundColor),
         contentAlignment = Alignment.Center
     ) {
-        // Top section with decorative elements
         Column(
             modifier = Modifier
                 .fillMaxWidth()
@@ -148,7 +136,7 @@ fun SignInScreen(userViewModel: UserViewModel) {
             Spacer(modifier = Modifier.height(20.dp))
             Box(
                 modifier = Modifier
-                    .size(250.dp)
+                    .size(180.dp)
                     .clip(CircleShape)
                     .background(
                         Brush.verticalGradient(
@@ -165,18 +153,16 @@ fun SignInScreen(userViewModel: UserViewModel) {
                     contentScale = ContentScale.Crop,
                     modifier = Modifier
                         .fillMaxWidth()
-                        .height(200.dp)
+                        .height(130.dp)
                 )
             }
         }
-
-        // Login Form Card
         Card(
             shape = RoundedCornerShape(24.dp),
             modifier = Modifier
                 .fillMaxWidth(0.9f)
                 .align(Alignment.Center)
-                .offset(y = 120.dp),
+                .offset(y = 98.dp),
             colors = CardDefaults.cardColors(containerColor = cardBackgroundColor),
             elevation = CardDefaults.cardElevation(defaultElevation = 8.dp)
         ) {
@@ -184,38 +170,54 @@ fun SignInScreen(userViewModel: UserViewModel) {
                 modifier = Modifier.padding(32.dp),
                 horizontalAlignment = Alignment.CenterHorizontally
             ) {
-                Text("Log In", fontSize = 32.sp, fontWeight = FontWeight.Bold, color = Color.Black)
-                Spacer(modifier = Modifier.height(30.dp))
-
+                Text("Sign In", fontSize = 32.sp, fontWeight = FontWeight.Bold, color = Color.Black)
+                Spacer(modifier = Modifier.height(32.dp))
+                // Email
                 TextField(
                     value = email,
                     onValueChange = { email = it },
                     label = { Text("Email", color = Color.Gray) },
                     singleLine = true,
-                    colors = TextFieldDefaults.colors( /* your colors */ ),
+                    colors = TextFieldDefaults.colors(
+                        focusedContainerColor = textFieldBackgroundColor,
+                        unfocusedContainerColor = textFieldBackgroundColor,
+                        disabledContainerColor = textFieldBackgroundColor,
+                        focusedIndicatorColor = Color.Transparent,
+                        unfocusedIndicatorColor = Color.Transparent,
+                        disabledIndicatorColor = Color.Transparent,
+                        cursorColor = Color.Black
+                    ),
                     shape = RoundedCornerShape(12.dp),
                     modifier = Modifier.fillMaxWidth()
                 )
                 Spacer(modifier = Modifier.height(18.dp))
-
+                // Password
                 TextField(
                     value = password,
                     onValueChange = { password = it },
                     label = { Text("Password", color = Color.Gray) },
                     singleLine = true,
                     visualTransformation = if (passwordVisible) VisualTransformation.None else PasswordVisualTransformation(),
-                    colors = TextFieldDefaults.colors( /* your colors */ ),
+                    colors = TextFieldDefaults.colors(
+                        focusedContainerColor = textFieldBackgroundColor,
+                        unfocusedContainerColor = textFieldBackgroundColor,
+                        disabledContainerColor = textFieldBackgroundColor,
+                        focusedIndicatorColor = Color.Transparent,
+                        unfocusedIndicatorColor = Color.Transparent,
+                        disabledIndicatorColor = Color.Transparent,
+                        cursorColor = Color.Black
+                    ),
                     shape = RoundedCornerShape(12.dp),
                     modifier = Modifier.fillMaxWidth(),
                     trailingIcon = {
-                        val image = if (passwordVisible) Icons.Filled.Visibility else Icons.Filled.VisibilityOff
+                        val image =
+                            if (passwordVisible) Icons.Filled.Visibility else Icons.Filled.VisibilityOff
                         IconButton(onClick = { passwordVisible = !passwordVisible }) {
                             Icon(imageVector = image, contentDescription = if (passwordVisible) "Hide password" else "Show password")
                         }
                     }
                 )
-                Spacer(modifier = Modifier.height(30.dp))
-
+                Spacer(modifier = Modifier.height(24.dp))
                 Button(
                     onClick = {
                         if (email.isBlank() || password.isBlank()) {
@@ -224,7 +226,9 @@ fun SignInScreen(userViewModel: UserViewModel) {
                             userViewModel.signIn(email, password)
                         }
                     },
-                    modifier = Modifier.fillMaxWidth().height(55.dp),
+                    modifier = Modifier
+                        .fillMaxWidth()
+                        .height(55.dp),
                     shape = RoundedCornerShape(16.dp),
                     colors = ButtonDefaults.buttonColors(containerColor = buttonColor),
                     enabled = !isLoading
@@ -232,22 +236,26 @@ fun SignInScreen(userViewModel: UserViewModel) {
                     if (isLoading) {
                         CircularProgressIndicator(color = Color.White, modifier = Modifier.size(24.dp))
                     } else {
-                        Text("Sign in", fontSize = 20.sp, fontWeight = FontWeight.SemiBold, color = Color.White)
+                        Text("Sign In", fontSize = 20.sp, fontWeight = FontWeight.SemiBold, color = Color.White)
                     }
                 }
-                Spacer(modifier = Modifier.height(16.dp))
-
+                Spacer(modifier = Modifier.height(10.dp))
                 Row(
                     horizontalArrangement = Arrangement.Center,
                     verticalAlignment = Alignment.CenterVertically
                 ) {
-                    Text("No account?", color = Color.DarkGray, fontSize = 16.sp)
+                    Text(
+                        "Don't have an account?",
+                        color = Color.DarkGray,
+                        fontSize = 16.sp
+                    )
                     Spacer(modifier = Modifier.width(4.dp))
                     TextButton(onClick = {
                         context.startActivity(Intent(context, SignUpActivity::class.java))
+                        (context as? ComponentActivity)?.finish()
                     }) {
                         Text(
-                            "sign up",
+                            "Sign up",
                             color = Color(0xFF8B4513),
                             fontWeight = FontWeight.SemiBold,
                             fontSize = 16.sp,
@@ -255,19 +263,19 @@ fun SignInScreen(userViewModel: UserViewModel) {
                         )
                     }
                 }
+                Spacer(modifier = Modifier.height(4.dp))
+                TextButton(onClick = {
+                    context.startActivity(Intent(context, ResetPasswordActivity::class.java))
+                }) {
+                    Text(
+                        "Forgot password?",
+                        color = Color(0xFF6B8E23),
+                        fontWeight = FontWeight.Medium,
+                        fontSize = 15.sp,
+                        textDecoration = TextDecoration.Underline
+                    )
+                }
             }
         }
-    }
-}
-
-@Preview(showBackground = true)
-@Composable
-fun SignInPreview() {
-    PetAdoptionManagementTheme {
-        val context = LocalContext.current
-        val userRepository = remember { UserRepositoryImpl(context) }
-        // Use the actual UserViewModel constructor as it's defined
-        val userViewModel = remember { UserViewModel(userRepository) }
-        SignInScreen(userViewModel = userViewModel)
     }
 }
