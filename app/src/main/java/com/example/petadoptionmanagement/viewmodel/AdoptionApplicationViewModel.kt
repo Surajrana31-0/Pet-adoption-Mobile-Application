@@ -64,6 +64,32 @@ class AdoptionApplicationViewModel(private val repository: AdoptionApplicationRe
     }
 
     /**
+     * Fetches a single adoption application by its ID (one-time fetch).
+     * This calls the repository's getApplicationById which returns a ListenerRegistration,
+     * so we manage that ListenerRegistration here.
+     * @param applicationId The unique ID of the application.
+     * @param onResult Callback invoked with the application data or an error.
+     */
+    private var singleApplicationListener: ListenerRegistration? = null // Add this to manage listener
+    fun getApplicationById(applicationId: String, onResult: (Result<AdoptionApplicationModel?>) -> Unit) {
+        _isLoading.postValue(true)
+        // Remove previous listener if exists
+        singleApplicationListener?.remove()
+        singleApplicationListener = repository.getApplicationById(applicationId) { result ->
+            result.fold(
+                onSuccess = { app ->
+                    onResult(Result.success(app))
+                },
+                onFailure = { e ->
+                    onResult(Result.failure(e))
+                    _message.postValue("Failed to load application details: ${e.message}")
+                }
+            )
+            _isLoading.postValue(false)
+        }
+    }
+
+    /**
      * Fetches and listens for real-time updates on all applications (for admin use).
      */
     fun getAllApplications() {
@@ -103,5 +129,6 @@ class AdoptionApplicationViewModel(private val repository: AdoptionApplicationRe
         // CRITICAL: Remove listeners to prevent memory leaks
         userAppsListener?.remove()
         allAppsListener?.remove()
+        singleApplicationListener?.remove()
     }
 }

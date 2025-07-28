@@ -10,6 +10,7 @@ import androidx.activity.ComponentActivity
 import androidx.activity.compose.setContent
 import androidx.activity.enableEdgeToEdge
 import androidx.compose.foundation.background
+import androidx.compose.foundation.clickable
 import androidx.compose.foundation.layout.*
 import androidx.compose.foundation.lazy.LazyColumn
 import androidx.compose.foundation.lazy.items
@@ -280,7 +281,15 @@ fun ApplicationManagementContent(
 
 @Composable
 fun ApplicationListItem(application: AdoptionApplicationModel, onApprove: (String) -> Unit, onReject: (String) -> Unit) {
-    Card(elevation = CardDefaults.cardElevation(4.dp), modifier = Modifier.fillMaxWidth()) {
+    val context = LocalContext.current // Get context
+    Card(elevation = CardDefaults.cardElevation(4.dp),
+        modifier = Modifier.fillMaxWidth()
+            .clickable {
+                val intent = Intent(context, ViewApplicationDetailsActivity::class.java).apply{
+                    putExtra("applicationId", application.applicationId)
+                }
+                context.startActivity(intent)
+            }) {
         Column(modifier = Modifier.padding(16.dp)) {
             Text("Pet: ${application.petName}", style = MaterialTheme.typography.titleMedium)
             Text("Applicant: ${application.applicantName}", style = MaterialTheme.typography.bodyMedium)

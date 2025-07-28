@@ -18,4 +18,6 @@
     <string name="title_activity_adopter_dashboard">AdopterDashboardActivity</string>
     <string name="title_activity_add_pet">AddPetActivity</string>
     <string name="title_activity_edit_pet">EditPetActivity</string>
+    <string name="title_activity_view_application_details">ViewApplicationDetailsActivity</string>
+    <string name="title_activity_adopter_profile_view">AdopterProfileViewActivity</string>
 </resources>

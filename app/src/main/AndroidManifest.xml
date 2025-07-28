@@ -72,6 +72,28 @@
 
     <application>
         <activity
+            android:name=".view.AdopterProfileViewActivity"
+            android:exported="true"
+            android:label="@string/title_activity_adopter_profile_view"
+            android:theme="@style/Theme.PetAdoptionManagement">
+            <intent-filter>
+                <action android:name="android.intent.action.MAIN" />
+
+                <category android:name="android.intent.category.LAUNCHER" />
+            </intent-filter>
+        </activity>
+        <activity
+            android:name=".view.ViewApplicationDetailsActivity"
+            android:exported="true"
+            android:label="@string/title_activity_view_application_details"
+            android:theme="@style/Theme.PetAdoptionManagement">
+            <intent-filter>
+                <action android:name="android.intent.action.MAIN" />
+
+                <category android:name="android.intent.category.LAUNCHER" />
+            </intent-filter>
+        </activity>
+        <activity
             android:name=".view.EditPetActivity"
             android:exported="true"
             android:label="@string/title_activity_edit_pet"
