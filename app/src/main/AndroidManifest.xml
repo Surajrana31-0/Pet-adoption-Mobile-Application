@@ -24,11 +24,7 @@
         android:exported="false"
         android:label="@string/title_activity_adopter_dashboard"
         android:theme="@style/Theme.PetAdoptionManagement" />
-    <activity
-        android:name=".view.ProfileViewScreen"
-        android:exported="false"
-        android:label="@string/title_activity_profile_view_screen"
-        android:theme="@style/Theme.PetAdoptionManagement" />
+
     <activity
         android:name=".view.AboutActivity"
         android:exported="false"

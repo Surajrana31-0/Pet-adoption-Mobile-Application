@@ -60,9 +60,9 @@ class EditPetActivity : ComponentActivity() {
                 val petRepository = remember {
                     val firestore = FirebaseFirestore.getInstance()
                     val config = mapOf(
-                        "cloud_name" to "YOUR_CLOUD_NAME",
-                        "api_key" to "YOUR_API_KEY",
-                        "api_secret" to "YOUR_API_SECRET"
+                        "cloud_name" to "dd9sooenk",
+                        "api_key" to "281858352367463",
+                        "api_secret" to "dj8vgOz6YCPGqqvQIGEa-dhQ0Ig"
                     )
                     val cloudinary = Cloudinary(config)
                     PetRepositoryImpl(firestore, cloudinary, applicationContext)

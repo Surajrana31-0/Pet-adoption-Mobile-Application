@@ -60,9 +60,9 @@ class AdopterProfileViewActivity : ComponentActivity() {
                     val auth = FirebaseAuth.getInstance()
                     val firestore = FirebaseFirestore.getInstance()
                     val config = mapOf(
-                        "cloud_name" to "YOUR_CLOUD_NAME", // Replace with actual credentials
-                        "api_key" to "YOUR_API_KEY",       // Replace with actual credentials
-                        "api_secret" to "YOUR_API_SECRET"   // Replace with actual credentials
+                        "cloud_name" to "dd9sooenk", // Replace with actual credentials
+                        "api_key" to "281858352367463",       // Replace with actual credentials
+                        "api_secret" to "dj8vgOz6YCPGqqvQIGEa-dhQ0Ig"   // Replace with actual credentials
                     )
                     val cloudinary = Cloudinary(config)
                     UserRepositoryImpl(auth, firestore, cloudinary, applicationContext)

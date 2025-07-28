@@ -131,6 +131,11 @@ class PetViewModel(private val petRepository: PetRepository) : ViewModel() {
         singlePetListener?.remove()
     }
 
+
+    fun clearMessage() {
+        _message.value = "" // This is allowed because it's inside the ViewModel
+    }
+
     // NEW FUNCTION FOR IMAGE UPLOAD AND UPDATE
     fun updatePetImageAndDetails(petId: String, imageUri: Uri, currentDetails: Map<String, Any>) {
         _isLoading.postValue(true)

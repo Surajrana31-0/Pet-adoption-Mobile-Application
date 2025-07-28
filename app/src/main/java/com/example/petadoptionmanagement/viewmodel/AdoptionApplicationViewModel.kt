@@ -131,4 +131,8 @@ class AdoptionApplicationViewModel(private val repository: AdoptionApplicationRe
         allAppsListener?.remove()
         singleApplicationListener?.remove()
     }
+
+    fun clearMessage() {
+        _message.value = "" // This is allowed because it's inside the ViewModel
+    }
 }

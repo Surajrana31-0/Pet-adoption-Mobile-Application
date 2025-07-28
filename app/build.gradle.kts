@@ -9,15 +9,7 @@ plugins {
     alias(libs.plugins.kotlin.compose)
 }
 
-// This logic to load local properties is correct. It should be at the top level.
-import java.util.Properties
-        import java.io.FileInputStream
 
-val localProperties = Properties()
-val localPropertiesFile = rootProject.file("local.properties")
-if (localPropertiesFile.exists()) {
-    localProperties.load(FileInputStream(localPropertiesFile))
-}
 
 // All Android-specific configuration MUST go inside this 'android' block.
 android {
@@ -36,10 +28,7 @@ android {
             useSupportLibrary = true
         }
 
-        // CORRECT PLACEMENT: These fields must be INSIDE defaultConfig
-        buildConfigField("String", "CLOUDINARY_CLOUD_NAME", "\"${localProperties.getProperty("cloudinary_cloud_name") ?: ""}\"")
-        buildConfigField("String", "CLOUDINARY_API_KEY", "\"${localProperties.getProperty("cloudinary_api_key") ?: ""}\"")
-        buildConfigField("String", "CLOUDINARY_API_SECRET", "\"${localProperties.getProperty("cloudinary_api_secret") ?: ""}\"")
+
     }
 
     // CORRECT PLACEMENT: This block must be INSIDE android
@@ -112,6 +101,9 @@ dependencies {
     implementation("com.google.firebase:firebase-auth-ktx")
     implementation("com.google.firebase:firebase-database-ktx")
     implementation("com.google.firebase:firebase-firestore-ktx")
+
+    implementation("androidx.activity:activity-compose:1.9.0") // Or the latest version
+    implementation("androidx.core:core-ktx:1.13.1") // Or the latest version
 
     // Testing
     testImplementation(libs.junit)

@@ -5,7 +5,7 @@ import android.os.Bundle
 import android.widget.Toast
 import androidx.activity.ComponentActivity
 import androidx.activity.compose.setContent
-import androidx.activity.enableEdgeToEdge
+import androidx.activity.enableEdgeToEdge // Ensure this import is present
 import androidx.compose.foundation.Image
 import androidx.compose.foundation.background
 import androidx.compose.foundation.clickable
@@ -27,18 +27,21 @@ import androidx.compose.ui.layout.ContentScale
 import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.res.painterResource
 import androidx.compose.ui.text.font.FontWeight
-import androidx.compose.ui.text.input.KeyboardOptions
 import androidx.compose.ui.text.input.ImeAction
+import androidx.compose.foundation.text.KeyboardOptions // Correct import for KeyboardOptions
 import androidx.compose.ui.text.input.KeyboardType
 import androidx.compose.ui.text.style.TextDecoration
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import androidx.lifecycle.viewmodel.compose.viewModel
+import com.cloudinary.Cloudinary // Import Cloudinary
 import com.example.petadoptionmanagement.R
 import com.example.petadoptionmanagement.repository.UserRepositoryImpl
 import com.example.petadoptionmanagement.ui.theme.PetAdoptionManagementTheme
 import com.example.petadoptionmanagement.viewmodel.UserViewModel
 import com.example.petadoptionmanagement.viewmodel.UserViewModelFactory
+import com.google.firebase.auth.FirebaseAuth // Import Firebase Auth
+import com.google.firebase.firestore.FirebaseFirestore // Import Firebase Firestore
 
 class ResetPasswordActivity : ComponentActivity() {
     override fun onCreate(savedInstanceState: Bundle?) {
@@ -46,7 +49,20 @@ class ResetPasswordActivity : ComponentActivity() {
         enableEdgeToEdge()
         setContent {
             PetAdoptionManagementTheme {
-                val userRepository = remember { UserRepositoryImpl(applicationContext) }
+                // --- FIX: Correctly initialize and provide all dependencies ---
+                val userRepository = remember {
+                    val auth = FirebaseAuth.getInstance()
+                    val firestore = FirebaseFirestore.getInstance()
+                    // IMPORTANT: Replace with your actual Cloudinary credentials
+                    val config = mapOf(
+                        "cloud_name" to "dd9sooenk",
+                        "api_key" to "281858352367463",
+                        "api_secret" to "dj8vgOz6YCPGqqvQIGEa-dhQ0Ig"
+                    )
+                    val cloudinary = Cloudinary(config)
+                    UserRepositoryImpl(auth, firestore, cloudinary, applicationContext)
+                }
+
                 val userViewModel: UserViewModel = viewModel(factory = UserViewModelFactory(userRepository))
                 ResetPasswordScreen(userViewModel = userViewModel)
             }
@@ -57,25 +73,30 @@ class ResetPasswordActivity : ComponentActivity() {
 @Composable
 fun ResetPasswordScreen(userViewModel: UserViewModel) {
     val context = LocalContext.current
-
     var email by remember { mutableStateOf("") }
     val isLoading by userViewModel.isLoading.observeAsState(false)
     val message by userViewModel.message.observeAsState()
 
-    // Toast & navigation safely handling nullable message
+    // Toast & navigation handling
     LaunchedEffect(message) {
         val msg = message ?: ""
         if (msg.isNotBlank()) {
-            Toast.makeText(context, msg, Toast.LENGTH_SHORT).show()
-            userViewModel.clearMessage()
+            Toast.makeText(context, msg, Toast.LENGTH_LONG).show()
+
+            // If the message indicates success, navigate to the sign-in screen
             if (msg.contains("reset email sent", ignoreCase = true) ||
                 msg.contains("email sent", ignoreCase = true)
             ) {
+                // Clear the message in ViewModel *after* showing the Toast and deciding to navigate
+                userViewModel.clearMessage()
                 val intent = Intent(context, SignInActivity::class.java).apply {
                     flags = Intent.FLAG_ACTIVITY_NEW_TASK or Intent.FLAG_ACTIVITY_CLEAR_TASK
                 }
                 context.startActivity(intent)
-                (context as? ComponentActivity)?.finish()
+                (context as? ComponentActivity)?.finish() // Finish ResetPasswordActivity
+            } else {
+                // For other messages (e.g., error messages), just clear the message
+                userViewModel.clearMessage()
             }
         }
     }
@@ -90,6 +111,7 @@ fun ResetPasswordScreen(userViewModel: UserViewModel) {
             .background(backgroundBrush),
         contentAlignment = Alignment.Center
     ) {
+        // Upper UI elements (Paw Print, Menu, Dog Image) - No changes needed to their structure
         Column(
             modifier = Modifier
                 .fillMaxWidth()
@@ -143,12 +165,14 @@ fun ResetPasswordScreen(userViewModel: UserViewModel) {
                 )
             }
         }
+
+        // Main Card (Password Reset Form)
         Card(
             shape = RoundedCornerShape(24.dp),
             modifier = Modifier
                 .fillMaxWidth(0.9f)
                 .align(Alignment.Center)
-                .offset(y = 120.dp),
+                .offset(y = 120.dp), // Adjust offset to position the card correctly relative to its content
             colors = CardDefaults.cardColors(containerColor = Color(0xFFDCDCDC)),
             elevation = CardDefaults.cardElevation(defaultElevation = 8.dp)
         ) {
@@ -163,7 +187,6 @@ fun ResetPasswordScreen(userViewModel: UserViewModel) {
                     color = Color.Black
                 )
                 Spacer(modifier = Modifier.height(25.dp))
-
                 OutlinedTextField(
                     value = email,
                     onValueChange = { email = it },
@@ -183,10 +206,9 @@ fun ResetPasswordScreen(userViewModel: UserViewModel) {
                         cursorColor = Color.Black,
                         focusedLabelColor = Color(0xFF6B8E23)
                     ),
-                    enabled = !isLoading
+                    enabled = !isLoading // Disable input when loading
                 )
                 Spacer(modifier = Modifier.height(25.dp))
-
                 Button(
                     onClick = {
                         if (email.isBlank()) {
@@ -199,7 +221,7 @@ fun ResetPasswordScreen(userViewModel: UserViewModel) {
                         .fillMaxWidth()
                         .height(55.dp),
                     shape = RoundedCornerShape(16.dp),
-                    enabled = !isLoading
+                    enabled = !isLoading // Disable button when loading
                 ) {
                     if (isLoading) {
                         CircularProgressIndicator(color = Color.White, modifier = Modifier.size(24.dp))
@@ -212,9 +234,7 @@ fun ResetPasswordScreen(userViewModel: UserViewModel) {
                         )
                     }
                 }
-
                 Spacer(modifier = Modifier.height(16.dp))
-
                 TextButton(
                     onClick = {
                         val intent = Intent(context, SignInActivity::class.java)

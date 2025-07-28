@@ -184,4 +184,8 @@ class UserViewModel(private val userRepository: UserRepository) : ViewModel() {
             FirebaseAuth.getInstance().removeAuthStateListener(it)
         }
     }
+
+    fun clearMessage() {
+        _message.value = "" // This is allowed because it's inside the ViewModel
+    }
 }
