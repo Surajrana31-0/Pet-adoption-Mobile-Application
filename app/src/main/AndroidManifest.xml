@@ -23,7 +23,7 @@
         android:name=".view.AdopterDashboardActivity"
         android:exported="false"
         android:label="@string/title_activity_adopter_dashboard"
-        android:theme="@style/Theme.PetAdoptionManagement"></activity>
+        android:theme="@style/Theme.PetAdoptionManagement" />
     <activity
         android:name=".view.ProfileViewScreen"
         android:exported="false"
@@ -71,6 +71,17 @@
         android:theme="@style/Theme.PetAdoptionManagement" />
 
     <application>
+        <activity
+            android:name=".view.EditPetActivity"
+            android:exported="true"
+            android:label="@string/title_activity_edit_pet"
+            android:theme="@style/Theme.PetAdoptionManagement">
+            <intent-filter>
+                <action android:name="android.intent.action.MAIN" />
+
+                <category android:name="android.intent.category.LAUNCHER" />
+            </intent-filter>
+        </activity>
         <activity
             android:name=".view.AddPetActivity"
             android:exported="true"

@@ -1,3 +1,6 @@
+// /viewmodel/UserViewModelFactory.kt
+// NO CHANGES NEEDED
+
 package com.example.petadoptionmanagement.viewmodel
 
 import androidx.lifecycle.ViewModel
@@ -8,6 +11,7 @@ import com.example.petadoptionmanagement.repository.UserRepository
 class UserViewModelFactory(
     private val userRepository: UserRepository
 ) : ViewModelProvider.Factory {
+
     override fun <T : ViewModel> create(modelClass: Class<T>): T {
         if (modelClass.isAssignableFrom(UserViewModel::class.java)) {
             return UserViewModel(userRepository) as T

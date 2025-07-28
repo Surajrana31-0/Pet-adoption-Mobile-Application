@@ -1,217 +1,153 @@
-package com.example.petadoptionmanagement.viewmodel
+// /viewmodel/PetViewModel.kt
 
-import android.content.Context
+package com.example.petadoption.viewmodel
+
 import android.net.Uri
 import androidx.lifecycle.LiveData
 import androidx.lifecycle.MutableLiveData
 import androidx.lifecycle.ViewModel
 import com.example.petadoptionmanagement.model.PetModel
 import com.example.petadoptionmanagement.repository.PetRepository
+import com.google.firebase.firestore.ListenerRegistration
 
-class PetViewModel(private val repo: PetRepository) : ViewModel() {
+class PetViewModel(private val petRepository: PetRepository) : ViewModel() {
+
+    // LiveData for a single selected pet
     private val _pet = MutableLiveData<PetModel?>()
     val pet: LiveData<PetModel?> get() = _pet
 
+    // The single source of truth for all pets, updated in real-time
     private val _allPets = MutableLiveData<List<PetModel>>()
     val allPets: LiveData<List<PetModel>> get() = _allPets
 
-    private val _myAddedPets = MutableLiveData<List<PetModel>>() // For admin ownership
-    val myAddedPets: LiveData<List<PetModel>> get() = _myAddedPets
+    // Status message for the UI (e.g., for showing Toast messages)
+    private val _message = MutableLiveData<String>()
+    val message: LiveData<String> get() = _message
 
-    private val _availablePets = MutableLiveData<List<PetModel>>() // For adopters
-    val availablePets: LiveData<List<PetModel>> get() = _availablePets
+    // Loading state for showing/hiding progress indicators
+    private val _isLoading = MutableLiveData<Boolean>()
+    val isLoading: LiveData<Boolean> get() = _isLoading
 
-    private val _myAdoptedPets = MutableLiveData<List<PetModel>>() // For adopters/adopted
-    val myAdoptedPets: LiveData<List<PetModel>> get() = _myAdoptedPets
+    // Store listener registrations to remove them later
+    private var allPetsListener: ListenerRegistration? = null
+    private var singlePetListener: ListenerRegistration? = null
 
-    private val _loading = MutableLiveData<Boolean>()
-    val loading: LiveData<Boolean> get() = _loading
-
-    private val _message = MutableLiveData<String?>()
-    val message: LiveData<String?> get() = _message
-
-    fun clearSelectedPet() {
-        _pet.value = null
+    init {
+        // Start listening for real-time updates as soon as the ViewModel is created
+        fetchAllPets()
     }
 
-    fun clearMessage() {
-        _message.value = null
-    }
-
-    fun uploadImage(context: Context, imageUri: Uri, callback: (String?) -> Unit) {
-        repo.uploadImage(context, imageUri) { imageUrl ->
-            callback(imageUrl)
-        }
-    }
-
-    fun addNewPet(
-        petModel: PetModel,
-        currentUserId: String,
-        currentUserRole: String,
-        callback: (Boolean, String) -> Unit
-    ) {
-        _loading.postValue(true)
-        // Only admins or the owner can add
-        if (currentUserRole != "admin") {
-            _loading.postValue(false)
-            _message.postValue("Only admins can add pets.")
-            callback(false, "Only admins can add pets.")
-            return
-        }
-        petModel.addedBy = currentUserId
-        repo.addPet(petModel) { success, msg ->
-            _loading.postValue(false)
-            _message.postValue(msg)
-            if (success) getAllPets()
-            callback(success, msg)
-        }
-    }
-
-    fun getPetById(petID: String) {
-        _loading.postValue(true)
-        repo.getPetById(petID) { success, msg, petData ->
-            _loading.postValue(false)
-            if (success) {
-                _pet.postValue(petData)
-            } else {
-                _pet.postValue(null)
-                _message.postValue(msg ?: "Failed to fetch pet $petID.")
-            }
-        }
-    }
-
-    fun getAllPets() {
-        _loading.postValue(true)
-        repo.getAllPets { success, msg, petsList ->
-            _loading.postValue(false)
-            if (success) {
-                _allPets.postValue(petsList)
-            } else {
-                _allPets.postValue(emptyList())
-                _message.postValue(msg ?: "Failed to fetch pets.")
-            }
-        }
-    }
-
-    fun getPetsByOwner(ownerId: String) {
-        _loading.postValue(true)
-        repo.getAllPets { success, msg, petsList ->
-            _loading.postValue(false)
-            if (success) {
-                _myAddedPets.postValue(petsList.filter { it.addedBy == ownerId })
-            } else {
-                _myAddedPets.postValue(emptyList())
-            }
-        }
-    }
-
-    fun getAvailablePets() {
-        _loading.postValue(true)
-        repo.getAllPets { success, msg, petsList ->
-            _loading.postValue(false)
-            if (success) {
-                _availablePets.postValue(petsList.filter { it.petStatus == "Available" })
-            } else {
-                _availablePets.postValue(emptyList())
-            }
-        }
-    }
-
-    fun getMyAdoptedPets(userId: String) {
-        _loading.postValue(true)
-        repo.getMyAdoptedPets(userId) { success, msg, petsList ->
-            _loading.postValue(false)
-            if (success) _myAdoptedPets.postValue(petsList)
-            else {
-                _myAdoptedPets.postValue(emptyList())
-                _message.postValue(msg)
-            }
-        }
-    }
-
-    fun updatePet(
-        petId: String,
-        data: Map<String, Any>,
-        currentUserId: String,
-        currentUserRole: String,
-        callback: (Boolean, String) -> Unit
-    ) {
-        _loading.postValue(true)
-        // Only admin or the one who added can update
-        repo.getPetById(petId) { success, _, pet ->
-            if (success && pet != null && (pet.addedBy == currentUserId || currentUserRole == "admin")) {
-                repo.updatePet(petId, data) { s, msg ->
-                    _loading.postValue(false)
-                    _message.postValue(msg)
-                    if (s) getAllPets()
-                    callback(s, msg)
+    private fun fetchAllPets() {
+        _isLoading.postValue(true)
+        // Remove any existing listener before attaching a new one
+        allPetsListener?.remove()
+        allPetsListener = petRepository.getAllPets { result ->
+            result.fold(
+                onSuccess = { pets -> _allPets.postValue(pets) },
+                onFailure = { e ->
+                    _allPets.postValue(emptyList())
+                    _message.postValue("Failed to load pets: ${e.message}")
                 }
-            } else {
-                _loading.postValue(false)
-                _message.postValue("Not authorized to update pet.")
-                callback(false, "Not authorized to update pet.")
-            }
+            )
+            _isLoading.postValue(false)
         }
     }
 
-    fun deletePet(petId: String, currentUserId: String, currentUserRole: String, callback: (Boolean, String) -> Unit) {
-        _loading.postValue(true)
-        repo.getPetById(petId) { success, _, pet ->
-            if (success && pet != null && (pet.addedBy == currentUserId || currentUserRole == "admin")) {
-                repo.deletePet(petId) { s, msg ->
-                    _loading.postValue(false)
-                    _message.postValue(msg)
-                    if (s) getAllPets()
-                    callback(s, msg)
+    fun getPetById(petId: String) {
+        _isLoading.postValue(true)
+        // Detach any previous single pet listener
+        singlePetListener?.remove()
+        singlePetListener = petRepository.getPetById(petId) { result ->
+            result.fold(
+                onSuccess = { petData -> _pet.postValue(petData) },
+                onFailure = { e ->
+                    _pet.postValue(null)
+                    _message.postValue("Failed to fetch pet details: ${e.message}")
                 }
-            } else {
-                _loading.postValue(false)
-                _message.postValue("Not authorized to delete pet.")
-                callback(false, "Not authorized to delete pet.")
+            )
+            _isLoading.postValue(false)
+        }
+    }
+
+    fun addNewPet(petModel: PetModel, imageUri: Uri?) {
+        _isLoading.postValue(true)
+        if (imageUri != null) {
+            // First, upload the image
+            petRepository.uploadPetImage(imageUri) { uploadResult ->
+                uploadResult.fold(
+                    onSuccess = { imageUrl ->
+                        // On successful upload, add the pet with the image URL
+                        val finalPet = petModel.copy(petImageUrl = imageUrl)
+                        createPetInDatabase(finalPet)
+                    },
+                    onFailure = { e ->
+                        _isLoading.postValue(false)
+                        _message.postValue("Image upload failed: ${e.message}")
+                    }
+                )
             }
+        } else {
+            // If no image, add the pet directly
+            createPetInDatabase(petModel)
         }
     }
 
-    fun applyForAdoption(
-        petId: String,
-        adopterId: String,
-        adopterRole: String,
-        callback: (Boolean, String) -> Unit
-    ) {
-        _loading.postValue(true)
-        if (adopterRole != "adopter") {
-            _loading.postValue(false)
-            _message.postValue("Only adopters may apply for adoption.")
-            callback(false, "Only adopters may adopt.")
-            return
-        }
-        repo.applyForAdoption(petId, adopterId, mapOf()) { success, msg ->
-            _loading.postValue(false)
-            _message.postValue(msg)
-            if (success) getAllPets()
-            callback(success, msg)
+    private fun createPetInDatabase(pet: PetModel) {
+        petRepository.addPet(pet) { result ->
+            result.fold(
+                onSuccess = { _message.postValue("Pet added successfully.") },
+                onFailure = { e -> _message.postValue("Failed to add pet: ${e.message}") }
+            )
+            _isLoading.postValue(false)
         }
     }
 
-    fun updatePetAdoptionStatus(
-        petId: String,
-        newStatus: String,
-        adoptionId: String?,
-        adminRole: String,
-        callback: (Boolean, String) -> Unit
-    ) {
-        _loading.postValue(true)
-        if (adminRole != "admin") {
-            _loading.postValue(false)
-            _message.postValue("Only admins may update adoption status.")
-            callback(false, "Only admins may update status.")
-            return
+    fun updatePet(petId: String, data: Map<String, Any>) {
+        _isLoading.postValue(true)
+        petRepository.updatePet(petId, data) { result ->
+            result.fold(
+                onSuccess = { _message.postValue("Pet updated successfully.") },
+                onFailure = { e -> _message.postValue("Failed to update pet: ${e.message}") }
+            )
+            _isLoading.postValue(false)
         }
-        repo.updatePetAdoptionStatus(petId, newStatus, adoptionId) { success, msg ->
-            _loading.postValue(false)
-            _message.postValue(msg)
-            if (success) getAllPets()
-            callback(success, msg)
+    }
+
+    fun deletePet(petId: String) {
+        _isLoading.postValue(true)
+        petRepository.deletePet(petId) { result ->
+            result.fold(
+                onSuccess = { _message.postValue("Pet deleted successfully.") },
+                onFailure = { e -> _message.postValue("Failed to delete pet: ${e.message}") }
+            )
+            _isLoading.postValue(false)
+        }
+    }
+
+    override fun onCleared() {
+        super.onCleared()
+        // IMPORTANT: Remove listeners to prevent memory leaks and unnecessary background work
+        allPetsListener?.remove()
+        singlePetListener?.remove()
+    }
+
+    // NEW FUNCTION FOR IMAGE UPLOAD AND UPDATE
+    fun updatePetImageAndDetails(petId: String, imageUri: Uri, currentDetails: Map<String, Any>) {
+        _isLoading.postValue(true)
+        petRepository.uploadPetImage(imageUri) { uploadResult ->
+            uploadResult.fold(
+                onSuccess = { newImageUrl ->
+                    val updatedData = currentDetails.toMutableMap().apply {
+                        put("petImageUrl", newImageUrl)
+                    }
+                    // Call the existing updatePet function with the new image URL
+                    updatePet(petId, updatedData)
+                },
+                onFailure = { e ->
+                    _message.postValue("Image upload failed: ${e.message}")
+                    _isLoading.postValue(false)
+                }
+            )
         }
     }
 }

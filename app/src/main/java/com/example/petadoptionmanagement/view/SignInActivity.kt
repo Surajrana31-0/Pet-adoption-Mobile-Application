@@ -1,5 +1,6 @@
 package com.example.petadoptionmanagement.view
 
+import android.app.Activity
 import android.content.Intent
 import android.os.Bundle
 import android.widget.Toast
@@ -34,12 +35,14 @@ import androidx.compose.ui.text.style.TextDecoration
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import androidx.lifecycle.viewmodel.compose.viewModel
+import com.cloudinary.Cloudinary
 import com.example.petadoptionmanagement.R
 import com.example.petadoptionmanagement.repository.UserRepositoryImpl
 import com.example.petadoptionmanagement.ui.theme.PetAdoptionManagementTheme
 import com.example.petadoptionmanagement.viewmodel.UserViewModel
 import com.example.petadoptionmanagement.viewmodel.UserViewModelFactory
-
+import com.google.firebase.auth.FirebaseAuth
+import com.google.firebase.firestore.FirebaseFirestore
 
 class SignInActivity : ComponentActivity() {
     override fun onCreate(savedInstanceState: Bundle?) {
@@ -47,8 +50,26 @@ class SignInActivity : ComponentActivity() {
         enableEdgeToEdge()
         setContent {
             PetAdoptionManagementTheme {
-                val userRepository = remember { UserRepositoryImpl(applicationContext) }
-                val userViewModel: UserViewModel = viewModel(factory = UserViewModelFactory(userRepository))
+                // --- FIX: Correctly initialize and provide all dependencies ---
+                val userRepository = remember {
+                    val auth = FirebaseAuth.getInstance()
+                    val firestore = FirebaseFirestore.getInstance()
+
+                    // IMPORTANT: Replace with your actual Cloudinary credentials
+                    val config = mapOf(
+                        "cloud_name" to "YOUR_CLOUD_NAME",
+                        "api_key" to "YOUR_API_KEY",
+                        "api_secret" to "YOUR_API_SECRET"
+                    )
+                    val cloudinary = Cloudinary(config)
+
+                    UserRepositoryImpl(auth, firestore, cloudinary, applicationContext)
+                }
+
+                val userViewModel: UserViewModel = viewModel(
+                    factory = UserViewModelFactory(userRepository)
+                )
+
                 SignInScreen(userViewModel = userViewModel)
             }
         }
@@ -58,43 +79,48 @@ class SignInActivity : ComponentActivity() {
 @Composable
 fun SignInScreen(userViewModel: UserViewModel) {
     val context = LocalContext.current
-
     var email by remember { mutableStateOf("") }
     var password by remember { mutableStateOf("") }
     var passwordVisible by remember { mutableStateOf(false) }
 
+    // Observe state from the ViewModel
     val isLoading by userViewModel.isLoading.observeAsState(false)
     val isLoggedIn by userViewModel.isLoggedIn.observeAsState(false)
-    val message by userViewModel.message.observeAsState("")
     val currentUser by userViewModel.currentUser.observeAsState(null)
-
-    // Handle navigation on login success with role-based routing
+    val message by userViewModel.message.observeAsState()
 
     var navigated by remember { mutableStateOf(false) }
 
+    // This effect handles navigation once the user is successfully logged in.
     LaunchedEffect(isLoggedIn, currentUser) {
+        // Ensure we only navigate once and that the user data is available.
         if (!navigated && isLoggedIn && currentUser != null) {
-            navigated = true
-            val user = currentUser
-            val role = user?.role?.lowercase() ?: ""
-            val intent = when (role) {
-                "admin" -> Intent(context, AdminDashboardActivity::class.java)
-                "adopter" -> Intent(context, AdopterDashboardActivity::class.java)
-                else -> Intent(context, SignInActivity::class.java)
+            navigated = true // Prevent multiple navigation events
+
+            val user = currentUser!!
+            val role = user.role.name.lowercase() // Using the enum's name
+
+            // Determine the next activity based on the user's role.
+            val nextActivity = when (role) {
+                "admin" -> AdminDashboardActivity::class.java
+                "adopter" -> AdopterDashboardActivity::class.java
+                else -> SignInActivity::class.java // Fallback in case of an unknown role
             }
-            intent.flags = Intent.FLAG_ACTIVITY_NEW_TASK or Intent.FLAG_ACTIVITY_CLEAR_TASK
+
+            val intent = Intent(context, nextActivity).apply {
+                flags = Intent.FLAG_ACTIVITY_NEW_TASK or Intent.FLAG_ACTIVITY_CLEAR_TASK
+            }
             context.startActivity(intent)
-            (context as? ComponentActivity)?.finish()
+            (context as? Activity)?.finish() // Finish SignInActivity
         }
     }
 
-
-
-    // Show Toast for feedback from ViewModel
+    // This effect shows feedback messages (like errors) to the user.
     LaunchedEffect(message) {
-        if (message?.isNotBlank() ?: false) {
+        if (!message.isNullOrBlank()) {
             Toast.makeText(context, message, Toast.LENGTH_SHORT).show()
-            userViewModel.clearMessage()
+            // Optionally clear the message in the ViewModel to prevent it from showing again.
+            // userViewModel.clearMessage()
         }
     }
 

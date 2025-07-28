@@ -1,25 +1,34 @@
+// /model/UserModel.kt
+
 package com.example.petadoptionmanagement.model
 
-/**
- * Represents a User in the Pet Adoption app.
- *
- * Supports multiple roles: "admin" or "adopter".
- * Stores essential user details including contact info, role, and preferences.
- */
+import com.google.firebase.firestore.ServerTimestamp
+import java.util.Date
+
+// Enum for user roles to ensure consistency
+enum class UserRole {
+    ADMIN,
+    ADOPTER
+}
+
 data class UserModel(
-    var userId: String = "",               // Firebase UID
+    var userId: String = "",
     var username: String = "",
     var firstname: String = "",
     var lastname: String = "",
     var contact: String = "",
     var email: String = "",
-    var profilePictureUrl: String? = null,
-    var role: String = "adopter",          // Default to "adopter", explicit admin role if needed
+    var profilePictureUrl: String? = null, // For Cloudinary profile image URL
+    var role: UserRole = UserRole.ADOPTER, // Use the enum
     var notificationPreferences: Map<String, Boolean> = emptyMap(),
-    var createdAt: Long = System.currentTimeMillis(),
-    var lastLogin: Long? = null
+
+    @ServerTimestamp
+    var createdAt: Date? = null,
+
+    @ServerTimestamp
+    var lastLogin: Date? = null
 ) {
-    // No-arg constructor required by Firebase for deserialization
+    // No-arg constructor required by Firebase
     constructor() : this(
         userId = "",
         username = "",
@@ -28,9 +37,9 @@ data class UserModel(
         contact = "",
         email = "",
         profilePictureUrl = null,
-        role = "adopter",
+        role = UserRole.ADOPTER,
         notificationPreferences = emptyMap(),
-        createdAt = System.currentTimeMillis(),
+        createdAt = null,
         lastLogin = null
     )
 }
