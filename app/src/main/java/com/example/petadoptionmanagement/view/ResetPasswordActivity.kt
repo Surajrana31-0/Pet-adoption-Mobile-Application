@@ -14,12 +14,10 @@ import androidx.compose.foundation.shape.CircleShape
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.filled.Email
-import androidx.compose.material.icons.filled.Lock // For lock icon
 import androidx.compose.material.icons.filled.Menu
-import androidx.compose.material.icons.filled.Visibility
-import androidx.compose.material.icons.filled.VisibilityOff
 import androidx.compose.material3.*
 import androidx.compose.runtime.*
+import androidx.compose.runtime.livedata.observeAsState
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
@@ -29,14 +27,18 @@ import androidx.compose.ui.layout.ContentScale
 import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.res.painterResource
 import androidx.compose.ui.text.font.FontWeight
-import androidx.compose.ui.text.input.PasswordVisualTransformation
-import androidx.compose.ui.text.input.VisualTransformation
+import androidx.compose.ui.text.input.KeyboardOptions
+import androidx.compose.ui.text.input.ImeAction
+import androidx.compose.ui.text.input.KeyboardType
 import androidx.compose.ui.text.style.TextDecoration
-import androidx.compose.ui.tooling.preview.Preview
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
+import androidx.lifecycle.viewmodel.compose.viewModel
 import com.example.petadoptionmanagement.R
+import com.example.petadoptionmanagement.repository.UserRepositoryImpl
 import com.example.petadoptionmanagement.ui.theme.PetAdoptionManagementTheme
+import com.example.petadoptionmanagement.viewmodel.UserViewModel
+import com.example.petadoptionmanagement.viewmodel.UserViewModelFactory
 
 class ResetPasswordActivity : ComponentActivity() {
     override fun onCreate(savedInstanceState: Bundle?) {
@@ -44,70 +46,54 @@ class ResetPasswordActivity : ComponentActivity() {
         enableEdgeToEdge()
         setContent {
             PetAdoptionManagementTheme {
-                val activityContext = this@ResetPasswordActivity
-
-                ResetPasswordScreen(
-                    onResetPasswordClick = { email, newPassword ->
-                        if (email.isBlank() || newPassword.isBlank()) {
-                            // This case should ideally be caught by client-side validation before this callback
-                            Toast.makeText(activityContext, "Please fill all fields.", Toast.LENGTH_SHORT).show()
-                        } else {
-                            // In a real app: Perform API call to reset password using email and newPassword
-                            Toast.makeText(activityContext, "Resetting password for $email with new password...", Toast.LENGTH_LONG).show()
-                            // If successful, navigate back to sign in
-                            val intent = Intent(activityContext, SignInActivity::class.java)
-                            intent.flags = Intent.FLAG_ACTIVITY_CLEAR_TOP or Intent.FLAG_ACTIVITY_NEW_TASK
-                            startActivity(intent)
-                            finish()
-                        }
-                    },
-                    onBackToSignInClick = {
-                        Toast.makeText(activityContext, "Navigating back to Sign In.", Toast.LENGTH_SHORT).show()
-                        val intent = Intent(activityContext, SignInActivity::class.java)
-                        intent.flags = Intent.FLAG_ACTIVITY_CLEAR_TOP or Intent.FLAG_ACTIVITY_NEW_TASK
-                        startActivity(intent)
-                        finish()
-                    },
-                    onMenuClick = {
-                        Toast.makeText(activityContext, "Menu icon clicked!", Toast.LENGTH_SHORT).show()
-                    }
-                )
+                val userRepository = remember { UserRepositoryImpl(applicationContext) }
+                val userViewModel: UserViewModel = viewModel(factory = UserViewModelFactory(userRepository))
+                ResetPasswordScreen(userViewModel = userViewModel)
             }
         }
     }
 }
 
 @Composable
-fun ResetPasswordScreen(
-    onResetPasswordClick: (String, String) -> Unit, // Callback now takes email and newPassword
-    onBackToSignInClick: () -> Unit,
-    onMenuClick: () -> Unit
-) {
+fun ResetPasswordScreen(userViewModel: UserViewModel) {
     val context = LocalContext.current
 
     var email by remember { mutableStateOf("") }
-    var newPassword by remember { mutableStateOf("") }
-    var confirmNewPassword by remember { mutableStateOf("") }
-    var newPasswordVisible by remember { mutableStateOf(false) } // State for new password visibility
-    var confirmNewPasswordVisible by remember { mutableStateOf(false) } // State for confirm new password visibility
+    val isLoading by userViewModel.isLoading.observeAsState(false)
+    val message by userViewModel.message.observeAsState()
 
-    val backgroundColor = Color(0xFF6B8E23)
-    val cardBackgroundColor = Color(0xFFDCDCDC)
-    val buttonColor = Color(0xFF8B4513)
-    val textFieldBackgroundColor = Color(0xFFFFFFFF)
+    // Toast & navigation safely handling nullable message
+    LaunchedEffect(message) {
+        val msg = message ?: ""
+        if (msg.isNotBlank()) {
+            Toast.makeText(context, msg, Toast.LENGTH_SHORT).show()
+            userViewModel.clearMessage()
+            if (msg.contains("reset email sent", ignoreCase = true) ||
+                msg.contains("email sent", ignoreCase = true)
+            ) {
+                val intent = Intent(context, SignInActivity::class.java).apply {
+                    flags = Intent.FLAG_ACTIVITY_NEW_TASK or Intent.FLAG_ACTIVITY_CLEAR_TASK
+                }
+                context.startActivity(intent)
+                (context as? ComponentActivity)?.finish()
+            }
+        }
+    }
+
+    val backgroundBrush = Brush.verticalGradient(
+        colors = listOf(Color(0xFF6B8E23), Color(0xFFDCDCDC))
+    )
 
     Box(
         modifier = Modifier
             .fillMaxSize()
-            .background(backgroundColor),
+            .background(backgroundBrush),
         contentAlignment = Alignment.Center
     ) {
-        // Top section with decorative elements: paw print icon, menu icon, and dog image
         Column(
             modifier = Modifier
                 .fillMaxWidth()
-                .padding(top = 14.dp)
-                .align(Alignment.TopCenter),
+                .padding(top = 32.dp),
             horizontalAlignment = Alignment.CenterHorizontally
         ) {
             Row(
@@ -119,23 +105,24 @@ fun ResetPasswordScreen(
             ) {
                 Image(
                     painter = painterResource(id = R.drawable.paw_print),
-                    contentDescription = "Paw Print Icon",
+                    contentDescription = "Paw Print",
                     modifier = Modifier.size(48.dp)
                 )
                 Icon(
                     imageVector = Icons.Default.Menu,
-                    contentDescription = "Menu Icon",
+                    contentDescription = "Menu",
                     tint = Color.White,
                     modifier = Modifier
                         .size(36.dp)
-                        .clickable { onMenuClick() }
+                        .clickable {
+                            Toast.makeText(context, "Menu clicked", Toast.LENGTH_SHORT).show()
+                        }
                 )
             }
-            Spacer(modifier = Modifier.height(20.dp))
-
+            Spacer(Modifier.height(20.dp))
             Box(
                 modifier = Modifier
-                    .size(250.dp)
+                    .size(220.dp)
                     .clip(CircleShape)
                     .background(
                         Brush.verticalGradient(
@@ -152,169 +139,98 @@ fun ResetPasswordScreen(
                     contentScale = ContentScale.Crop,
                     modifier = Modifier
                         .fillMaxWidth()
-                        .height(200.dp)
+                        .height(160.dp)
                 )
             }
         }
-
-        // Reset Password Form Card
         Card(
             shape = RoundedCornerShape(24.dp),
             modifier = Modifier
                 .fillMaxWidth(0.9f)
                 .align(Alignment.Center)
-                .offset(y = 150.dp), // Adjusted offset to accommodate content
-            colors = CardDefaults.cardColors(containerColor = cardBackgroundColor),
+                .offset(y = 120.dp),
+            colors = CardDefaults.cardColors(containerColor = Color(0xFFDCDCDC)),
             elevation = CardDefaults.cardElevation(defaultElevation = 8.dp)
         ) {
             Column(
-                modifier = Modifier
-                    .padding(32.dp),
+                modifier = Modifier.padding(32.dp),
                 horizontalAlignment = Alignment.CenterHorizontally
             ) {
-                // "Reset Password" Title
                 Text(
-                    "Reset Password",
+                    text = "Reset Password",
                     fontSize = 32.sp,
                     fontWeight = FontWeight.Bold,
                     color = Color.Black
                 )
-                Spacer(modifier = Modifier.height(25.dp)) // Adjusted spacing
+                Spacer(modifier = Modifier.height(25.dp))
 
-                // Email Address Input Field
-                TextField(
+                OutlinedTextField(
                     value = email,
                     onValueChange = { email = it },
-                    label = { Text("Registered Email", color = Color.Gray) }, // Changed label for clarity
-                    singleLine = true,
-                    leadingIcon = { Icon(Icons.Default.Email, contentDescription = "Email icon") },
-                    colors = TextFieldDefaults.colors(
-                        focusedContainerColor = textFieldBackgroundColor,
-                        unfocusedContainerColor = textFieldBackgroundColor,
-                        disabledContainerColor = textFieldBackgroundColor,
-                        focusedIndicatorColor = Color.Transparent,
-                        unfocusedIndicatorColor = Color.Transparent,
-                        disabledIndicatorColor = Color.Transparent,
-                        cursorColor = Color.Black
+                    label = { Text("Registered Email", color = Color.Gray) },
+                    keyboardOptions = KeyboardOptions(
+                        keyboardType = KeyboardType.Email,
+                        imeAction = ImeAction.Done
                     ),
-                    shape = RoundedCornerShape(12.dp),
-                    modifier = Modifier.fillMaxWidth()
-                )
-                Spacer(modifier = Modifier.height(18.dp)) // Spacing for new fields
-
-                // New Password Input Field with Eye Button
-                TextField(
-                    value = newPassword,
-                    onValueChange = { newPassword = it },
-                    label = { Text("New Password", color = Color.Gray) },
                     singleLine = true,
-                    leadingIcon = { Icon(Icons.Default.Lock, contentDescription = "Lock icon") }, // Lock icon
-                    visualTransformation = if (newPasswordVisible) VisualTransformation.None else PasswordVisualTransformation(),
-                    colors = TextFieldDefaults.colors(
-                        focusedContainerColor = textFieldBackgroundColor,
-                        unfocusedContainerColor = textFieldBackgroundColor,
-                        disabledContainerColor = textFieldBackgroundColor,
-                        focusedIndicatorColor = Color.Transparent,
-                        unfocusedIndicatorColor = Color.Transparent,
-                        disabledIndicatorColor = Color.Transparent,
-                        cursorColor = Color.Black
-                    ),
-                    shape = RoundedCornerShape(12.dp),
+                    leadingIcon = {
+                        Icon(Icons.Default.Email, contentDescription = "Email Icon")
+                    },
                     modifier = Modifier.fillMaxWidth(),
-                    trailingIcon = {
-                        val image = if (newPasswordVisible) Icons.Filled.Visibility else Icons.Filled.VisibilityOff
-                        val description = if (newPasswordVisible) "Hide new password" else "Show new password"
-                        IconButton(onClick = { newPasswordVisible = !newPasswordVisible }) {
-                            Icon(imageVector = image, contentDescription = description)
-                        }
-                    }
-                )
-                Spacer(modifier = Modifier.height(18.dp))
-
-                // Confirm New Password Input Field with Eye Button
-                TextField(
-                    value = confirmNewPassword,
-                    onValueChange = { confirmNewPassword = it },
-                    label = { Text("Confirm New Password", color = Color.Gray) },
-                    singleLine = true,
-                    leadingIcon = { Icon(Icons.Default.Lock, contentDescription = "Lock icon") }, // Lock icon
-                    visualTransformation = if (confirmNewPasswordVisible) VisualTransformation.None else PasswordVisualTransformation(),
-                    colors = TextFieldDefaults.colors(
-                        focusedContainerColor = textFieldBackgroundColor,
-                        unfocusedContainerColor = textFieldBackgroundColor,
-                        disabledContainerColor = textFieldBackgroundColor,
-                        focusedIndicatorColor = Color.Transparent,
-                        unfocusedIndicatorColor = Color.Transparent,
-                        disabledIndicatorColor = Color.Transparent,
-                        cursorColor = Color.Black
+                    colors = OutlinedTextFieldDefaults.colors(
+                        focusedBorderColor = Color(0xFF6B8E23),
+                        unfocusedBorderColor = Color.Gray,
+                        cursorColor = Color.Black,
+                        focusedLabelColor = Color(0xFF6B8E23)
                     ),
-                    shape = RoundedCornerShape(12.dp),
-                    modifier = Modifier.fillMaxWidth(),
-                    trailingIcon = {
-                        val image = if (confirmNewPasswordVisible) Icons.Filled.Visibility else Icons.Filled.VisibilityOff
-                        val description = if (confirmNewPasswordVisible) "Hide confirm new password" else "Show confirm new password"
-                        IconButton(onClick = { confirmNewPasswordVisible = !confirmNewPasswordVisible }) {
-                            Icon(imageVector = image, contentDescription = description)
-                        }
-                    }
+                    enabled = !isLoading
                 )
-                Spacer(modifier = Modifier.height(25.dp)) // Spacing before button
+                Spacer(modifier = Modifier.height(25.dp))
 
-                // Reset Password Button
                 Button(
                     onClick = {
-                        if (email.isBlank() || newPassword.isBlank() || confirmNewPassword.isBlank()) {
-                            Toast.makeText(context, "Please fill all fields.", Toast.LENGTH_SHORT).show()
-                        } else if (newPassword != confirmNewPassword) {
-                            Toast.makeText(context, "New passwords do not match.", Toast.LENGTH_SHORT).show()
+                        if (email.isBlank()) {
+                            Toast.makeText(context, "Please enter your registered email.", Toast.LENGTH_SHORT).show()
                         } else {
-                            // If all client-side validation passes, invoke callback
-                            onResetPasswordClick(email, newPassword)
+                            userViewModel.forgetPassword(email)
                         }
                     },
                     modifier = Modifier
                         .fillMaxWidth()
                         .height(55.dp),
                     shape = RoundedCornerShape(16.dp),
-                    colors = ButtonDefaults.buttonColors(containerColor = buttonColor)
+                    enabled = !isLoading
                 ) {
-                    Text(
-                        "Reset Password",
-                        fontSize = 20.sp,
-                        fontWeight = FontWeight.SemiBold,
-                        color = Color.White
-                    )
-                }
-                Spacer(modifier = Modifier.height(16.dp))
-
-                // "Back to Sign In" section
-                Row(
-                    horizontalArrangement = Arrangement.Center,
-                    verticalAlignment = Alignment.CenterVertically
-                ) {
-                    TextButton(onClick = { onBackToSignInClick() }) {
+                    if (isLoading) {
+                        CircularProgressIndicator(color = Color.White, modifier = Modifier.size(24.dp))
+                    } else {
                         Text(
-                            "Back to Sign In",
-                            color = Color(0xFF8B4513),
+                            "Send Reset Email",
+                            fontSize = 20.sp,
                             fontWeight = FontWeight.SemiBold,
-                            fontSize = 16.sp,
-                            textDecoration = TextDecoration.Underline
+                            color = Color.White
                         )
                     }
                 }
+
+                Spacer(modifier = Modifier.height(16.dp))
+
+                TextButton(
+                    onClick = {
+                        val intent = Intent(context, SignInActivity::class.java)
+                        context.startActivity(intent)
+                        (context as? ComponentActivity)?.finish()
+                    }
+                ) {
+                    Text(
+                        "Back to Sign In",
+                        color = Color(0xFF8B4513),
+                        fontWeight = FontWeight.SemiBold,
+                        fontSize = 16.sp,
+                        textDecoration = TextDecoration.Underline
+                    )
+                }
             }
         }
-    }
-}
-
-@Preview(showBackground = true)
-@Composable
-fun ResetPasswordPreview() {
-    PetAdoptionManagementTheme {
-        ResetPasswordScreen(
-            onResetPasswordClick = { _, _ -> /* No action in preview */ },
-            onBackToSignInClick = { /* No action in preview */ },
-            onMenuClick = { /* No action in preview */ }
-        )
     }
 }

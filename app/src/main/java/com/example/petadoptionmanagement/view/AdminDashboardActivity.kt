@@ -2,200 +2,53 @@ package com.example.petadoptionmanagement.view
 
 import android.content.Intent
 import android.os.Bundle
-import androidx.activity.ComponentActivity
-import androidx.activity.compose.setContent
-import androidx.compose.foundation.layout.*
-import androidx.compose.foundation.lazy.LazyColumn
-import androidx.compose.foundation.lazy.items
-import androidx.compose.material.icons.Icons
-import androidx.compose.material.icons.filled.Add
-import androidx.compose.material3.*
-import androidx.compose.runtime.*
-import androidx.compose.ui.Alignment
-import androidx.compose.ui.Modifier
-import androidx.compose.ui.platform.LocalContext
-import androidx.compose.ui.unit.dp
-import androidx.lifecycle.viewmodel.compose.viewModel
-import com.example.petadoptionmanagement.data.model.Pet
-import com.example.petadoptionmanagement.repository.PetRepositoryImpl
-import com.example.petadoptionmanagement.presentation.factory.PetViewModelFactory
-import com.example.petadoptionmanagement.viewmodel.PetViewModel
-import com.example.petadoptionmanagement.ui.theme.PetAdoptionManagementTheme
-import com.example.petadoptionmanagement.utils.Resource
-
-class AdminDashboardActivity : ComponentActivity() {
-    override fun onCreate(savedInstanceState: Bundle?) {
-        super.onCreate(savedInstanceState)
-
-        val petRepository = PetRepositoryImpl() // In a real app, use DI (Hilt)
-        val petViewModelFactory = PetViewModelFactory(petRepository)
-
-        setContent {
-            PetAdoptionManagementTheme {
-                AdminDashboardScreen(viewModel = viewModel(factory = petViewModelFactory))
-            }
-        }
-    }
-}
-
-@OptIn(ExperimentalMaterial3Api::class)
-@Composable
-fun AdminDashboardScreen(viewModel: PetViewModel) {
-    val context = LocalContext.current
-    val petState by viewModel.pets.collectAsState()
-
-    Scaffold(
-        topBar = {
-            TopAppBar(
-                title = { Text("Admin Dashboard") },
-                colors = TopAppBarDefaults.topAppBarColors(
-                    containerColor = MaterialTheme.colorScheme.primaryContainer,
-                    titleContentColor = MaterialTheme.colorScheme.primary,
-                )
-            )
-        },
-        floatingActionButton = {
-            FloatingActionButton(onClick = {
-                context.startActivity(Intent(context, AddEditPetActivity::class.java))
-            }) {
-                Icon(Icons.Default.Add, contentDescription = "Add Pet")
-            }
-        }
-    ) { paddingValues ->
-        Column(
-            modifier = Modifier
-                .fillMaxSize()
-                .padding(paddingValues)
-                .padding(16.dp)
-        ) {
-            when (val resource = petState) {
-                is Resource.Loading -> {
-                    Box(modifier = Modifier.fillMaxSize(), contentAlignment = Alignment.Center) {
-                        CircularProgressIndicator()
-                    }
-                }
-                is Resource.Success -> {
-                    val pets = resource.data
-                    if (!pets.isNullOrEmpty()) {
-                        LazyColumn(verticalArrangement = Arrangement.spacedBy(12.dp)) {
-                            items(pets) { pet ->
-                                AdminPetCard(
-                                    pet = pet,
-                                    onEdit = {
-                                        val intent = Intent(context, AddEditPetActivity::class.java).apply {
-                                            putExtra("PET_EXTRA", pet) // Make sure Pet is Parcelable
-                                        }
-                                        context.startActivity(intent)
-                                    },
-                                    onDelete = { viewModel.deletePet(pet.id) }
-                                )
-                            }
-                        }
-                    } else {
-                        Text("No pets found. Click the '+' button to add one.")
-                    }
-                }
-                is Resource.Error -> {
-                    Text(
-                        text = "Error: ${resource.message}",
-                        color = MaterialTheme.colorScheme.error
-                    )
-                }
-            }
-        }
-    }
-}
-
-@Composable
-fun AdminPetCard(pet: Pet, onEdit: () -> Unit, onDelete: () -> Unit) {
-    Card(
-        modifier = Modifier.fillMaxWidth(),
-        elevation = CardDefaults.cardElevation(defaultElevation = 2.dp)
-    ) {
-        Column(modifier = Modifier.padding(16.dp)) {
-            Text(text = pet.name, style = MaterialTheme.typography.titleLarge)
-            Spacer(modifier = Modifier.height(4.dp))
-            Text(text = "Breed: ${pet.breed}", style = MaterialTheme.typography.bodyMedium)
-            Text(text = "Age: ${pet.age}", style = MaterialTheme.typography.bodyMedium)
-            Spacer(modifier = Modifier.height(8.dp))
-            Row(horizontalArrangement = Arrangement.spacedBy(8.dp)) {
-                Button(onClick = onEdit) {
-                    Text("Edit")
-                }
-                OutlinedButton(onClick = onDelete) {
-                    Text("Delete")
-                }
-            }
-        }
-    }
-}
-
-import android.os.Bundle
 import android.widget.Toast
 import androidx.activity.ComponentActivity
 import androidx.activity.compose.setContent
 import androidx.activity.enableEdgeToEdge
+import androidx.compose.animation.*
 import androidx.compose.foundation.Image
+import androidx.compose.foundation.background
 import androidx.compose.foundation.layout.*
 import androidx.compose.foundation.lazy.LazyColumn
-import androidx.compose.foundation.lazy.items // Correct import for LazyColumn items
-import androidx.compose.foundation.text.KeyboardActions
-import androidx.compose.foundation.text.KeyboardOptions
+import androidx.compose.foundation.lazy.items
+import androidx.compose.foundation.rememberScrollState
+import androidx.compose.foundation.shape.CircleShape
+import androidx.compose.foundation.shape.RoundedCornerShape
+import androidx.compose.foundation.verticalScroll
 import androidx.compose.material.icons.Icons
-import androidx.compose.material.icons.filled.* // Import all filled icons
-import androidx.compose.material.icons.outlined.FilterList
+import androidx.compose.material.icons.filled.Add
+import androidx.compose.material.icons.filled.Group
+import androidx.compose.material.icons.filled.Menu
+import androidx.compose.material.icons.filled.Pets
+import androidx.compose.material.icons.filled.TaskAlt
+import androidx.compose.material.icons.outlined.EditNote
+import androidx.compose.material.icons.outlined.Settings
 import androidx.compose.material3.*
 import androidx.compose.runtime.*
-import androidx.compose.runtime.getValue
 import androidx.compose.runtime.livedata.observeAsState
-import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
+import androidx.compose.ui.draw.clip
+import androidx.compose.ui.graphics.Brush
 import androidx.compose.ui.graphics.Color
-import androidx.compose.ui.graphics.vector.ImageVector
 import androidx.compose.ui.layout.ContentScale
 import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.res.painterResource
 import androidx.compose.ui.text.font.FontWeight
-import androidx.compose.ui.text.input.ImeAction
-import androidx.compose.ui.tooling.preview.Preview
 import androidx.compose.ui.unit.dp
-import androidx.lifecycle.viewmodel.compose.viewModel // For using ViewModel with factory
-import androidx.navigation.NavHostController
-import androidx.navigation.compose.NavHost
-import androidx.navigation.compose.composable
-import androidx.navigation.compose.currentBackStackEntryAsState
-import androidx.navigation.compose.rememberNavController
-import coil.compose.rememberAsyncImagePainter // For loading images from URL
-import com.example.petadoptionmanagement.R // Assuming you have a placeholder image
+import androidx.compose.ui.unit.sp
+import androidx.lifecycle.viewmodel.compose.viewModel
+import coil.compose.AsyncImage
+import com.example.petadoptionmanagement.R
 import com.example.petadoptionmanagement.model.PetModel
 import com.example.petadoptionmanagement.repository.PetRepositoryImpl
 import com.example.petadoptionmanagement.repository.UserRepositoryImpl
-import com.example.petadoptionmanagement.view.ui.theme.PetAdoptionManagementTheme
+import com.example.petadoptionmanagement.ui.theme.PetAdoptionManagementTheme
 import com.example.petadoptionmanagement.viewmodel.PetViewModel
 import com.example.petadoptionmanagement.viewmodel.PetViewModelFactory
 import com.example.petadoptionmanagement.viewmodel.UserViewModel
 import com.example.petadoptionmanagement.viewmodel.UserViewModelFactory
-
-
-// --- Navigation Setup ---
-sealed class AdminScreen(val route: String, val label: String, val icon: ImageVector) {
-    object Overview : AdminScreen("overview", "Overview", Icons.Filled.Analytics)
-    object PetManagement : AdminScreen("pet_management", "Pets", Icons.Filled.Pets)
-    object UserManagement : AdminScreen("user_management", "Users", Icons.Filled.Group)
-    object AdoptionRequests : AdminScreen("adoption_requests", "Requests", Icons.Filled.AssignmentInd)
-    object AdminSettings : AdminScreen("admin_settings", "Settings", Icons.Filled.Settings)
-}
-
-//private val PetModel.imageUrl: String
-val adminScreens = listOf(
-    AdminScreen.Overview,
-    AdminScreen.PetManagement,
-    AdminScreen.UserManagement,
-    AdminScreen.AdoptionRequests,
-    AdminScreen.AdminSettings
-)
-// --- End Navigation Setup ---
 
 class AdminDashboardActivity : ComponentActivity() {
     override fun onCreate(savedInstanceState: Bundle?) {
@@ -203,28 +56,11 @@ class AdminDashboardActivity : ComponentActivity() {
         enableEdgeToEdge()
         setContent {
             PetAdoptionManagementTheme {
-                // 1. Instantiate Repositories
-                // Assuming PetRepositoryImpl also has an empty constructor or doesn't need context
-                // If PetRepositoryImpl needs context, change to:
-                // val petRepository = remember { PetRepositoryImpl(applicationContext) }
-                val petRepository = remember { PetRepositoryImpl() }
-                val userRepository = remember { UserRepositoryImpl(context) } // Correctly uses empty constructor
-
-                // 2. Create ViewModel Factories
-                val petViewModelFactory = remember { PetViewModelFactory(petRepository) }
-                val userViewModelFactory = remember { UserViewModelFactory(userRepository) }
-
-                // 3. Get ViewModels using the factories
-                val petViewModel: PetViewModel = viewModel(factory = petViewModelFactory)
-                val userViewModel: UserViewModel = viewModel(factory = userViewModelFactory)
-
-                val navController = rememberNavController()
-
-                AdminMainScreen(
-                    navController = navController,
-                    petViewModel = petViewModel,
-                    userViewModel = userViewModel
-                )
+                val petRepo = remember { PetRepositoryImpl() }
+                val petViewModel: PetViewModel = viewModel(factory = PetViewModelFactory(petRepo))
+                val userRepo = remember { UserRepositoryImpl(applicationContext) }
+                val userViewModel: UserViewModel = viewModel(factory = UserViewModelFactory(userRepo))
+                AdminDashboardScreen(petViewModel, userViewModel)
             }
         }
     }
@@ -232,444 +68,240 @@ class AdminDashboardActivity : ComponentActivity() {
 
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
-fun AdminMainScreen(
-    navController: NavHostController,
+fun AdminDashboardScreen(
     petViewModel: PetViewModel,
-    userViewModel: UserViewModel
-) {
-    val currentBackStackEntry by navController.currentBackStackEntryAsState()
-    val currentRoute = currentBackStackEntry?.destination?.route
-    val showPetFab = currentRoute == AdminScreen.PetManagement.route
-
-    Scaffold(
-        topBar = {
-            CenterAlignedTopAppBar(
-                title = {
-                    Text(
-                        text = adminScreens.find { it.route == currentRoute }?.label ?: "Admin Panel",
-                        fontWeight = FontWeight.Bold
-                    )
-                },
-                navigationIcon = {
-                    Icon(
-                        imageVector = Icons.Filled.AdminPanelSettings,
-                        contentDescription = "Admin Panel",
-                        modifier = Modifier.padding(start = 12.dp)
-                    )
-                },
-                colors = TopAppBarDefaults.centerAlignedTopAppBarColors(
-                    containerColor = MaterialTheme.colorScheme.primaryContainer,
-                    titleContentColor = MaterialTheme.colorScheme.onPrimaryContainer,
-                    navigationIconContentColor = MaterialTheme.colorScheme.onPrimaryContainer
-                )
-            )
-        },
-        bottomBar = {
-            AdminBottomNavigationBar(navController = navController, items = adminScreens)
-        },
-        floatingActionButton = {
-            if (showPetFab) {
-                FloatingActionButton(onClick = {
-                    navController.navigate("add_pet_screen")
-                }) {
-                    Icon(Icons.Default.Add, contentDescription = "Add Pet")
-                }
-            }
-        },
-        modifier = Modifier.fillMaxSize()
-    ) { innerPadding ->
-        AdminNavHost(
-            navController = navController,
-            modifier = Modifier.padding(innerPadding),
-            petViewModel = petViewModel,
-            userViewModel = userViewModel
-        )
-    }
-}
-
-@Composable
-fun AdminBottomNavigationBar(navController: NavHostController, items: List<AdminScreen>) {
-    NavigationBar {
-        val currentRoute = navController.currentBackStackEntryAsState().value?.destination?.route
-        items.forEach { screen ->
-            NavigationBarItem(
-                icon = { Icon(screen.icon, contentDescription = screen.label) },
-                label = { Text(screen.label) },
-                selected = currentRoute == screen.route,
-                onClick = {
-                    if (currentRoute != screen.route) {
-                        navController.navigate(screen.route) {
-                            popUpTo(navController.graph.startDestinationId) { saveState = true }
-                            launchSingleTop = true
-                            restoreState = true
-                        }
-                    }
-                }
-            )
-        }
-    }
-}
-
-@Composable
-fun AdminNavHost(
-    navController: NavHostController,
-    modifier: Modifier = Modifier,
-    petViewModel: PetViewModel,
-    userViewModel: UserViewModel
-) {
-    NavHost(
-        navController = navController,
-        startDestination = AdminScreen.PetManagement.route,
-        modifier = modifier
-    ) {
-        composable(AdminScreen.Overview.route) {
-            AdminOverviewScreen()
-        }
-        composable(AdminScreen.PetManagement.route) {
-            PetListScreen(navController = navController, viewModel = petViewModel)
-        }
-        composable(AdminScreen.UserManagement.route) {
-            UserManagementScreen(userViewModel = userViewModel)
-        }
-        composable(AdminScreen.AdoptionRequests.route) {
-            AdoptionRequestsScreen()
-        }
-        composable(AdminScreen.AdminSettings.route) {
-            AdminSettingsScreen()
-        }
-        composable("add_pet_screen") {
-            AddEditPetScreen(navController = navController, viewModel = petViewModel, petId = null)
-        }
-        composable("update_pet_screen/{petId}") { backStackEntry ->
-            val petId = backStackEntry.arguments?.getString("petId")
-            AddEditPetScreen(navController = navController, viewModel = petViewModel, petId = petId)
-        }
-    }
-}
-
-@OptIn(ExperimentalMaterial3Api::class)
-@Composable
-fun PetListScreen(
-    navController: NavHostController,
-    viewModel: PetViewModel
+    userViewModel: UserViewModel,
 ) {
     val context = LocalContext.current
-    val petsState = viewModel.allPets.observeAsState(initial = emptyList())
-    val loading by viewModel.loading.observeAsState(initial = true)
-    var searchQuery by remember { mutableStateOf("") }
-    var showFilterDialog by remember { mutableStateOf(false) }
+    val allPets by petViewModel.allPets.observeAsState(initial = emptyList())
+    val currentUser by userViewModel.currentUser.observeAsState()
+    val isLoading by petViewModel.loading.observeAsState(false)
 
-    val filteredPets = remember(searchQuery, petsState.value) {
-        petsState.value.filter { pet ->
-            pet?.petName?.contains(searchQuery, ignoreCase = true) == true ||
-                    pet?.petBreed?.contains(searchQuery, ignoreCase = true) == true
-        }
+    // Basic stats
+    val totalPets = allPets.size
+    val availablePets = allPets.count { it.petStatus.equals("available", true) }
+    val adoptedPets = allPets.count { it.petStatus.equals("adopted", true) }
+    val pendingAdoptions = allPets.count { it.petStatus.equals("pending adoption", true) }
+    // For demo purposes; plug in user stats from your ViewModel if needed!
+    val totalUsers = 1
+
+    // Fetch pets on entering the screen
+    LaunchedEffect(Unit) { petViewModel.getAllPets() }
+
+    // -- FAB opens AddPet screen --
+    val onAddPet = {
+        context.startActivity(Intent(context, AddPetActivity::class.java))
     }
 
-    LaunchedEffect(Unit) {
-        viewModel.getAllPets()
-    }
-
-    Column(modifier = Modifier.fillMaxSize()) {
-        Row(
-            modifier = Modifier
-                .fillMaxWidth()
-                .padding(horizontal = 16.dp, vertical = 8.dp),
-            verticalAlignment = Alignment.CenterVertically
-        ) {
-            OutlinedTextField(
-                value = searchQuery,
-                onValueChange = { searchQuery = it },
-                label = { Text("Search Pets (Name, Breed)") },
-                modifier = Modifier.weight(1f),
-                singleLine = true,
-                leadingIcon = { Icon(Icons.Filled.Search, contentDescription = "Search") },
-                keyboardOptions = KeyboardOptions(imeAction = ImeAction.Search),
-                keyboardActions = KeyboardActions(onSearch = { /* Handle search */ })
-            )
-            Spacer(modifier = Modifier.width(8.dp))
-            IconButton(onClick = { showFilterDialog = true }) {
-                Icon(Icons.Outlined.FilterList, contentDescription = "Filter Pets")
-            }
-        }
-
-        if (loading) {
-            Box(modifier = Modifier.fillMaxSize(), contentAlignment = Alignment.Center) {
-                CircularProgressIndicator()
-            }
-        } else {
-            if (filteredPets.isEmpty()) {
-                Box(modifier = Modifier.fillMaxSize(), contentAlignment = Alignment.Center) {
-                    Text(
-                        text = if (searchQuery.isNotBlank() || petsState.value.isEmpty()) "No pets found matching your criteria." else "No pets found. Click '+' to add one!",
-                        modifier = Modifier.padding(16.dp),
-                        style = MaterialTheme.typography.bodyLarge
-                    )
-                }
-            } else {
-                LazyColumn(
-                    modifier = Modifier.fillMaxSize(),
-                    contentPadding = PaddingValues(horizontal = 16.dp, vertical = 8.dp)
-                ) {
-                    items(filteredPets, key = { pet -> pet?.petId ?: "" }) { pet ->
-                        pet?.let {
-                            PetCardItem(
-                                pet = it,
-                                onEditClick = {
-                                    navController.navigate("update_pet_screen/${it.petId}")
-                                },
-                                onDeleteClick = {
-                                    viewModel.deletePet(it.petId) { success, message ->
-                                        Toast.makeText(context, message, Toast.LENGTH_SHORT).show()
-                                        if (success) {
-                                            viewModel.getAllPets() // Refresh list
-                                        }
-                                    }
-                                }
-                            )
-                        }
-                    }
-                }
-            }
-        }
-    }
-
-    if (showFilterDialog) {
-        AlertDialog(
-            onDismissRequest = { showFilterDialog = false },
-            title = { Text("Filter Pets") },
-            text = { Text("Filter options will go here (e.g., by status, age).") }, // Placeholder
-            confirmButton = {
-                Button(onClick = { showFilterDialog = false }) { Text("Apply") }
-            },
-            dismissButton = {
-                Button(onClick = { showFilterDialog = false }) { Text("Cancel") }
-            }
+    val recentEvents = remember { // TODO: Fetch real events, e.g., from fireStore/Repo
+        listOf(
+            "3 new adoption requests received",
+            "Bella was adopted successfully",
+            "Max was added to 'Available' pets"
         )
-    }
-}
-
-@Composable
-fun PetCardItem(pet: PetModel, onEditClick: () -> Unit, onDeleteClick: () -> Unit) {
-    Card(
-        modifier = Modifier
-            .fillMaxWidth()
-            .padding(vertical = 8.dp),
-        elevation = CardDefaults.cardElevation(defaultElevation = 2.dp)
-    ) {
-        Row(
-            modifier = Modifier.padding(12.dp),
-            verticalAlignment = Alignment.CenterVertically
-        ) {
-            Image(
-                painter = rememberAsyncImagePainter(
-                    model = pet.imageUrl.ifEmpty { R.drawable.dog_image }, // Use actual imageUrl or placeholder
-                    error = painterResource(id = R.drawable.featuredpet1) // Placeholder on error
-                ),
-                contentDescription = pet.petName,
-                modifier = Modifier
-                    .size(80.dp)
-                    .padding(end = 12.dp),
-                contentScale = ContentScale.Crop
-            )
-            Column(modifier = Modifier.weight(1f)) {
-                Text(text = pet.petName, style = MaterialTheme.typography.titleLarge)
-                Text(text = "${pet.petBreed} | Age: ${pet.petAge}", style = MaterialTheme.typography.bodyMedium)
-                Text(
-                    text = "Status: ${pet.petStatus}",
-                    style = MaterialTheme.typography.bodySmall,
-                    color = if (pet.petStatus.equals("Available", ignoreCase = true)) Color.Green.copy(alpha = 0.7f) else Color.Red.copy(alpha = 0.7f)
-                )
-            }
-            Row {
-                IconButton(
-                    onClick = onEditClick,
-                    colors = IconButtonDefaults.iconButtonColors(contentColor = MaterialTheme.colorScheme.primary)
-                ) {
-                    Icon(Icons.Default.Edit, contentDescription = "Edit Pet")
-                }
-                IconButton(
-                    onClick = onDeleteClick,
-                    colors = IconButtonDefaults.iconButtonColors(contentColor = MaterialTheme.colorScheme.error)
-                ) {
-                    Icon(Icons.Default.Delete, contentDescription = "Delete Pet")
-                }
-            }
-        }
-    }
-}
-
-@Composable
-fun AdminOverviewScreen() {
-    Box(modifier = Modifier.fillMaxSize(), contentAlignment = Alignment.Center) {
-        Text("Admin Overview Screen", style = MaterialTheme.typography.headlineMedium)
-    }
-}
-
-@Composable
-fun UserManagementScreen(userViewModel: UserViewModel) { // Pass UserViewModel here
-    Box(modifier = Modifier.fillMaxSize(), contentAlignment = Alignment.Center) {
-        // Example: Observe something from userViewModel
-        // val currentUser by userViewModel.currentUser.observeAsState()
-        // Text("User Management Screen - Current User: ${currentUser?.email ?: "None"}", style = MaterialTheme.typography.headlineMedium)
-        Text("User Management Screen", style = MaterialTheme.typography.headlineMedium)
-    }
-}
-
-@Composable
-fun AdoptionRequestsScreen() {
-    Box(modifier = Modifier.fillMaxSize(), contentAlignment = Alignment.Center) {
-        Text("Adoption Requests Screen", style = MaterialTheme.typography.headlineMedium)
-    }
-}
-
-@Composable
-fun AdminSettingsScreen() {
-    Box(modifier = Modifier.fillMaxSize(), contentAlignment = Alignment.Center) {
-        Text("Admin Settings Screen", style = MaterialTheme.typography.headlineMedium)
-    }
-}
-
-@OptIn(ExperimentalMaterial3Api::class) // Added for TopAppBar
-@Composable
-fun AddEditPetScreen(
-    navController: NavHostController,
-    viewModel: PetViewModel,
-    petId: String?
-) {
-    val context = LocalContext.current
-    val isEditing = petId != null
-    var petName by remember { mutableStateOf("") }
-    var petBreed by remember { mutableStateOf("") }
-    var petAge by remember { mutableStateOf("") }
-    var petStatus by remember { mutableStateOf("Available") } // Default status
-    var petDescription by remember { mutableStateOf("") }
-    var imageUrl by remember { mutableStateOf("") } // For simplicity, manual URL input
-
-    // Observe selectedPet for editing, assuming your PetViewModel has a LiveData for it
-    val selectedPetForEditing by viewModel.pet.observeAsState() // Make sure `pet` is the LiveData for a single pet
-
-    LaunchedEffect(petId) {
-        if (isEditing && petId != null) {
-            viewModel.getPetById(petId) // This should update `viewModel.pet`
-        } else {
-            // Clear fields if adding a new pet or if navigating back from edit
-            petName = ""
-            petBreed = ""
-            petAge = ""
-            petStatus = "Available"
-            petDescription = ""
-            imageUrl = ""
-            viewModel.clearSelectedPet() // Add a method in ViewModel to clear the selected pet LiveData
-        }
-    }
-
-    LaunchedEffect(selectedPetForEditing) {
-        if (isEditing && selectedPetForEditing != null && selectedPetForEditing!!.petId == petId) {
-            petName = selectedPetForEditing!!.petName
-            petBreed = selectedPetForEditing!!.petBreed
-            petAge = selectedPetForEditing!!.petAge
-            petStatus = selectedPetForEditing!!.petStatus
-            petDescription = selectedPetForEditing!!.petDescription
-            imageUrl = selectedPetForEditing!!.imageUrl
-        }
     }
 
     Scaffold(
         topBar = {
             TopAppBar(
-                title = { Text(if (isEditing) "Edit Pet" else "Add New Pet") },
-                navigationIcon = {
-                    IconButton(onClick = { navController.popBackStack() }) {
-                        Icon(Icons.Filled.ArrowBack, "Back")
-                    }
-                }
-            )
-        }
-    ) { paddingValues ->
-        Column(
-            modifier = Modifier
-                .padding(paddingValues)
-                .padding(16.dp)
-                .fillMaxSize(),
-            horizontalAlignment = Alignment.CenterHorizontally,
-            verticalArrangement = Arrangement.spacedBy(8.dp) // Add some spacing
-        ) {
-            Text(if (isEditing) "Edit Pet Details" else "Add New Pet", style = MaterialTheme.typography.headlineSmall)
-            OutlinedTextField(value = petName, onValueChange = { petName = it }, label = { Text("Pet Name") }, modifier = Modifier.fillMaxWidth())
-            OutlinedTextField(value = petBreed, onValueChange = { petBreed = it }, label = { Text("Pet Breed") }, modifier = Modifier.fillMaxWidth())
-            OutlinedTextField(value = petAge, onValueChange = { petAge = it }, label = { Text("Pet Age") }, modifier = Modifier.fillMaxWidth())
-            OutlinedTextField(value = petStatus, onValueChange = { petStatus = it }, label = { Text("Pet Status (e.g., Available)") }, modifier = Modifier.fillMaxWidth())
-            OutlinedTextField(value = petDescription, onValueChange = { petDescription = it }, label = { Text("Pet Description") }, modifier = Modifier.fillMaxWidth(),maxLines = 3)
-            OutlinedTextField(value = imageUrl, onValueChange = { imageUrl = it }, label = { Text("Image URL") }, modifier = Modifier.fillMaxWidth())
-
-
-            Spacer(Modifier.height(16.dp))
-            Button(
-                onClick = {
-                    val petData = PetModel(
-                        petId = petId ?: java.util.UUID.randomUUID().toString(), // Generate new ID if adding
-                        petName = petName,
-                        petBreed = petBreed,
-                        petAge = petAge,
-                        petStatus = petStatus,
-                        petDescription = petDescription,
-                        imageUrl = imageUrl
-                        // Initialize other fields if your PetModel has them
-                    )
-                    if (isEditing && petId != null) {
-                        viewModel.updatePet(petId, petData) { success, msg ->
-                            Toast.makeText(context, msg, Toast.LENGTH_SHORT).show()
-                            if (success) navController.popBackStack()
+                title = {
+                    Row(verticalAlignment = Alignment.CenterVertically) {
+                        if (!currentUser?.profilePictureUrl.isNullOrBlank()) {
+                            AsyncImage(
+                                model = currentUser?.profilePictureUrl,
+                                contentDescription = "Admin profile photo",
+                                modifier = Modifier
+                                    .size(44.dp)
+                                    .clip(CircleShape)
+                            )
+                        } else {
+                            Icon(
+                                imageVector = Icons.Filled.Menu,
+                                contentDescription = "Avatar fallback",
+                                modifier = Modifier
+                                    .size(44.dp)
+                                    .clip(CircleShape)
+                            )
                         }
-                    } else {
-                        viewModel.addNewPet(petData) { success, msg ->
-                            Toast.makeText(context, msg, Toast.LENGTH_SHORT).show()
-                            if (success) navController.popBackStack()
+                        Spacer(Modifier.width(12.dp))
+                        Column {
+                            Text(
+                                "Hello, ${currentUser?.firstname ?: "Admin"}!",
+                                fontWeight = FontWeight.Bold,
+                                fontSize = 21.sp,
+                                color = Color(0xFF607D8B)
+                            )
+                            Text(
+                                "Admin Dashboard",
+                                color = Color(0xFF6B8E23),
+                                fontSize = 16.sp
+                            )
                         }
                     }
                 },
-                modifier = Modifier.fillMaxWidth()
+                actions = {
+                    IconButton(
+                        onClick = {
+                            // Go to Admin Profile
+                            context.startActivity(Intent(context, ProfileViewScreen::class.java))
+                        }
+                    ) {
+                        Icon(Icons.Outlined.Settings, "Settings", tint = Color(0xFF6B8E23))
+                    }
+                }
+            )
+        },
+        floatingActionButton = {
+            ExtendedFloatingActionButton(
+                text = { Text("Add Pet") },
+                icon = { Icon(Icons.Default.Add, contentDescription = null) },
+                onClick = onAddPet,
+                containerColor = Color(0xFF8B4513)
+            )
+        }
+    ) { innerPadding ->
+        Box(
+            Modifier
+                .fillMaxSize()
+                .padding(innerPadding)
+                .background(
+                    Brush.verticalGradient(
+                        colors = listOf(Color(0xFFF8F8FF), Color(0xFFE6F2E6))
+                    )
+                )
+        ) {
+            Column(
+                Modifier
+                    .fillMaxSize()
+                    .padding(horizontal = 20.dp, vertical = 8.dp)
+                    .verticalScroll(rememberScrollState()),
+                horizontalAlignment = Alignment.CenterHorizontally
             ) {
-                Text(if (isEditing) "Save Changes" else "Add Pet")
+                AnimatedVisibility(visible = isLoading) {
+                    LinearProgressIndicator(Modifier.fillMaxWidth())
+                }
+                // Analytics stats
+                AdminStatRow(
+                    stats = listOf(
+                        Triple("Pets", totalPets, Color(0xFF8B4513)),
+                        Triple("Available", availablePets, Color(0xFF43A047)),
+                        Triple("Pending", pendingAdoptions, Color(0xFFED6C02)),
+                        Triple("Adopted", adoptedPets, Color(0xFF2196F3)),
+                        Triple("Users", totalUsers, Color(0xFF795548))
+                    )
+                )
+                Spacer(Modifier.height(24.dp))
+
+                // Quick action row
+                Row(
+                    Modifier.fillMaxWidth(),
+                    horizontalArrangement = Arrangement.SpaceEvenly
+                ) {
+                    AdminActionButton(
+                        text = "All Pets",
+                        icon = Icons.Filled.Pets
+                    ) {
+                        context.startActivity(Intent(context, PetViewActivity::class.java))
+                    }
+                    AdminActionButton(
+                        text = "Adoptions",
+                        icon = Icons.Default.TaskAlt
+                    ) {
+                        context.startActivity(Intent(context, AdoptionActivity::class.java))
+                    }
+                    AdminActionButton(
+                        text = "Users",
+                        icon = Icons.Default.Group
+                    ) {
+                        context.startActivity(Intent(context, ProfileViewScreen::class.java))
+                    }
+                }
+                Spacer(Modifier.height(26.dp))
+
+                Text(
+                    "Recent Activity",
+                    fontWeight = FontWeight.SemiBold,
+                    fontSize = 20.sp,
+                    color = Color(0xFF5D4037),
+                    modifier = Modifier.align(Alignment.Start)
+                )
+                Spacer(Modifier.height(8.dp))
+
+                if (recentEvents.isEmpty()) {
+                    Text("No recent actions.", color = Color.Gray)
+                } else {
+                    LazyColumn(
+                        Modifier
+                            .fillMaxWidth()
+                            .heightIn(max = 190.dp)
+                    ) {
+                        items(recentEvents) { event ->
+                            Card(
+                                Modifier
+                                    .fillMaxWidth()
+                                    .padding(vertical = 5.dp),
+                                colors = CardDefaults.cardColors(containerColor = Color(0xFFF5F5F5))
+                            ) {
+                                Text(event, Modifier.padding(14.dp), fontSize = 15.sp)
+                            }
+                        }
+                    }
+                }
+                Spacer(Modifier.height(18.dp))
             }
         }
     }
 }
 
-
-//@Preview(showBackground = true)
-//@Composable
-//fun AdminDashboardPreview() {
-//    PetAdoptionManagementTheme {
-//        val navController = rememberNavController()
-//        // Dummy repositories and ViewModels for preview
-//        val dummyPetRepository = PetRepositoryImpl() // Assuming empty constructor
-//        val dummyPetViewModel = PetViewModel(dummyPetRepository)
-//
-//        // For UserRepositoryImpl, if it needs context for some reason in a REAL scenario,
-//        // you'd pass LocalContext.current.applicationContext.
-//        // But since we confirmed yours doesn't, an empty constructor is fine for the real app
-//        // and for the preview.
-//        val dummyUserRepository = UserRepositoryImpl()
-//        val dummyUserViewModel = UserViewModel(dummyUserRepository)
-//
-//        AdminMainScreen(
-//            navController = navController,
-//            petViewModel = dummyPetViewModel,
-//            userViewModel = dummyUserViewModel
-//        )
-//    }
-//}
-
-@Preview(showBackground = true)
 @Composable
-fun PetCardItemPreview() {
-    PetAdoptionManagementTheme {
-        PetCardItem(
-            pet = PetModel("1", "Buddy", "Golden Retriever", "2 years", "Available", "Friendly and playful", imageUrl = "http://example.com/buddy.jpg"),
-            onEditClick = {},
-            onDeleteClick = {}
-        )
+fun AdminStatRow(stats: List<Triple<String, Int, Color>>) {
+    Row(
+        Modifier
+            .fillMaxWidth()
+            .padding(vertical = 12.dp),
+        horizontalArrangement = Arrangement.SpaceBetween
+    ) {
+        stats.forEach { (label, value, color) ->
+            AdminStatCard(label, value, color = color)
+        }
+    }
+}
+
+@Composable
+fun AdminStatCard(label: String, value: Int, color: Color) {
+    Card(
+        Modifier
+            .width(97.dp)
+            .height(90.dp),
+        colors = CardDefaults.cardColors(containerColor = color.copy(alpha = 0.14f)),
+        elevation = CardDefaults.cardElevation(4.dp)
+    ) {
+        Column(
+            modifier = Modifier
+                .padding(10.dp)
+                .fillMaxSize(),
+            verticalArrangement = Arrangement.Center,
+            horizontalAlignment = Alignment.CenterHorizontally
+        ) {
+            Text("$value", fontWeight = FontWeight.ExtraBold, fontSize = 27.sp, color = color)
+            Spacer(Modifier.height(5.dp))
+            Text(label, fontSize = 14.sp, color = color)
+        }
+    }
+}
+
+@Composable
+fun AdminActionButton(text: String, icon: androidx.compose.ui.graphics.vector.ImageVector, onClick: () -> Unit) {
+    OutlinedButton(
+        onClick = onClick,
+        shape = RoundedCornerShape(12.dp),
+        colors = ButtonDefaults.outlinedButtonColors(contentColor = Color(0xFF8B4513)),
+        modifier = Modifier
+            .height(44.dp)
+            .width(124.dp)
+    ) {
+        Icon(icon, contentDescription = text, modifier = Modifier.size(24.dp))
+        Spacer(Modifier.width(7.dp))
+        Text(text, fontWeight = FontWeight.Medium)
     }
 }

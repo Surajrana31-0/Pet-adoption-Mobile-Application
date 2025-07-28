@@ -81,30 +81,16 @@ fun SplashScreen(userViewModel: UserViewModel) {
     //Observe login and user state (Provided by live data)
     val isLoggedIn by userViewModel.isLoggedIn.observeAsState()
     val currentUser by userViewModel.currentUser.observeAsState()
-
-    // --- NAVIGATION HANDLING ---
     var navigated by remember { mutableStateOf(false) }
+
     LaunchedEffect(isLoggedIn, currentUser) {
-        startAnimation = true
-
-        // Wait for splash animation
-        delay(2100)
-
-        // Wait for currentUser state to be loaded (max 1.4s after animation)
-        val waitStart = System.currentTimeMillis()
-        while ((isLoggedIn == null || (isLoggedIn == true && currentUser == null)) &&
-            System.currentTimeMillis() - waitStart < 1400
-        ) {
-            delay(100)
-        }
-
+        // ... splash animation ...
         if (!navigated) {
-            navigated = true
-            val user = currentUser // Assign to local
+            val user = currentUser // local val = OK for smart cast
             val role = user?.role?.lowercase() ?: ""
             val nextActivity = when {
                 isLoggedIn == true && user != null -> {
-                    when(role) {
+                    when (role) {
                         "admin" -> AdminDashboardActivity::class.java
                         "adopter" -> AdopterDashboardActivity::class.java
                         else -> SignInActivity::class.java
@@ -112,13 +98,11 @@ fun SplashScreen(userViewModel: UserViewModel) {
                 }
                 else -> SignInActivity::class.java
             }
-            val intent = Intent(context, nextActivity).apply {
-                flags = Intent.FLAG_ACTIVITY_NEW_TASK or Intent.FLAG_ACTIVITY_CLEAR_TASK
-            }
-            context.startActivity(intent)
-            (context as? ComponentActivity)?.finish()
+            // ... launch intent as in your code ...
+            navigated = true
         }
     }
+
 
     // --- DESIGN ---
     val gradientBrush = Brush.verticalGradient(

@@ -40,6 +40,7 @@ import com.example.petadoptionmanagement.ui.theme.PetAdoptionManagementTheme
 import com.example.petadoptionmanagement.viewmodel.UserViewModel
 import com.example.petadoptionmanagement.viewmodel.UserViewModelFactory
 
+
 class SignInActivity : ComponentActivity() {
     override fun onCreate(savedInstanceState: Bundle?) {
         super.onCreate(savedInstanceState)
@@ -68,9 +69,13 @@ fun SignInScreen(userViewModel: UserViewModel) {
     val currentUser by userViewModel.currentUser.observeAsState(null)
 
     // Handle navigation on login success with role-based routing
+
+    var navigated by remember { mutableStateOf(false) }
+
     LaunchedEffect(isLoggedIn, currentUser) {
-        if (isLoggedIn && currentUser != null) {
-            val user = currentUser // Smart-cast!
+        if (!navigated && isLoggedIn && currentUser != null) {
+            navigated = true
+            val user = currentUser
             val role = user?.role?.lowercase() ?: ""
             val intent = when (role) {
                 "admin" -> Intent(context, AdminDashboardActivity::class.java)
@@ -82,6 +87,7 @@ fun SignInScreen(userViewModel: UserViewModel) {
             (context as? ComponentActivity)?.finish()
         }
     }
+
 
 
     // Show Toast for feedback from ViewModel

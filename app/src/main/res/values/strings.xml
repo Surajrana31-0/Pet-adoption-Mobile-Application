@@ -16,4 +16,5 @@
     <string name="title_activity_add_new_pet">AddNewPetActivity</string>
     <string name="title_activity_my_application">MyApplication</string>
     <string name="title_activity_adopter_dashboard">AdopterDashboardActivity</string>
+    <string name="title_activity_add_pet">AddPetActivity</string>
 </resources>
