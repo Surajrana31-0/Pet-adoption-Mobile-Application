@@ -1,25 +1,20 @@
-// /app/build.gradle.kts
+// app/build.gradle.kts
 
-// The plugins block should be at the very top.
 plugins {
     alias(libs.plugins.android.application)
     alias(libs.plugins.kotlin.android)
-    // The google-services plugin should be applied here.
     alias(libs.plugins.google.gms.google.services)
     alias(libs.plugins.kotlin.compose)
 }
 
-
-
-// All Android-specific configuration MUST go inside this 'android' block.
 android {
     namespace = "com.example.petadoptionmanagement"
-    compileSdk = 34 // Sticking to 34 for broad compatibility, but 35 is fine if you have the setup.
+    compileSdk = 36 // CONFIRMED: Keep at 36 as per previous fix
 
     defaultConfig {
         applicationId = "com.example.petadoptionmanagement"
         minSdk = 27
-        targetSdk = 34 // Match compileSdk
+        targetSdk = 36 // CONFIRMED: Match compileSdk
         versionCode = 1
         versionName = "1.0"
 
@@ -27,11 +22,8 @@ android {
         vectorDrawables {
             useSupportLibrary = true
         }
-
-
     }
 
-    // CORRECT PLACEMENT: This block must be INSIDE android
     buildTypes {
         release {
             isMinifyEnabled = false
@@ -42,26 +34,25 @@ android {
         }
     }
 
-    // CORRECT PLACEMENT: These blocks must be INSIDE android
     compileOptions {
-        // For compileSdk 34, VERSION_1_8 is standard. If you use 35, change this to VERSION_17.
-        sourceCompatibility = JavaVersion.VERSION_11
-        targetCompatibility = JavaVersion.VERSION_11
+        sourceCompatibility = JavaVersion.VERSION_1_8 // Can be 1.8 for compatibility or 11/17 for newer features
+        targetCompatibility = JavaVersion.VERSION_1_8 // Match sourceCompatibility
     }
 
     kotlinOptions {
-        // For compileSdk 34, "1.8" is standard. If you use 35, change this to "17".
-        jvmTarget = "11"
+        jvmTarget = "1.8" // Match Java version, or "11"
     }
 
     buildFeatures {
         compose = true
-        buildConfig = true // This is essential for BuildConfig generation
+        buildConfig = true
     }
 
     composeOptions {
         // This version should be compatible with your Kotlin and Compose library versions.
-        kotlinCompilerExtensionVersion = "1.5.1" // A common stable version
+        // For compileSdk 36 and recent Compose/Kotlin, try 1.5.10 or 1.6.x.
+        // If 1.5.1 still gives warnings, increase this.
+        kotlinCompilerExtensionVersion = "1.5.10" // Updated to a more recent stable version
     }
 
     packaging {
@@ -71,21 +62,22 @@ android {
     }
 }
 
-// The dependencies block is separate from the 'android' block.
 dependencies {
-    // Core AndroidX & UI
+    // Import the Compose BOM first for consistent versions
+    // Ensure you're using androidx.compose:compose-bom:2024.04.00 or higher
+    // (Check your libs.versions.toml for the actual compose.bom version)
+    implementation(platform(libs.androidx.compose.bom))
+
+    // Core AndroidX & UI (using libs.versions.toml managed versions)
     implementation(libs.androidx.core.ktx)
     implementation(libs.androidx.lifecycle.runtime.ktx)
-    implementation(libs.androidx.activity.compose)
-
-    // Jetpack Compose (using the BOM for version management)
-    implementation(platform(libs.androidx.compose.bom))
+    implementation(libs.androidx.activity.compose) // This handles enableEdgeToEdge and activity-compose
     implementation(libs.androidx.ui)
     implementation(libs.androidx.ui.graphics)
     implementation(libs.androidx.ui.tooling.preview)
     implementation(libs.androidx.material3)
-    implementation("androidx.compose.material:material-icons-extended") // Keep for now
-    implementation("androidx.compose.runtime:runtime-livedata")
+    implementation("androidx.compose.material:material-icons-extended")
+    implementation("androidx.compose.runtime:runtime-livedata") // For LiveData observation
 
     // Navigation
     implementation("androidx.navigation:navigation-compose:2.7.7")
@@ -94,16 +86,16 @@ dependencies {
     implementation("io.coil-kt:coil-compose:2.6.0")
 
     // Cloudinary SDK
-    implementation("com.cloudinary:cloudinary-android:2.4.0") // Using a recent version
+    implementation("com.cloudinary:cloudinary-android:2.4.0")
 
     // Firebase (using the BOM for version management)
     implementation(platform("com.google.firebase:firebase-bom:33.1.0"))
     implementation("com.google.firebase:firebase-auth-ktx")
-    implementation("com.google.firebase:firebase-database-ktx")
+    // If you are ONLY using Firestore, you can remove firebase-database-ktx
+    // If you indeed use Realtime Database, keep it.
+    // Based on our conversation, you primarily use Firestore.
+    // implementation("com.google.firebase:firebase-database-ktx")
     implementation("com.google.firebase:firebase-firestore-ktx")
-
-    implementation("androidx.activity:activity-compose:1.9.0") // Or the latest version
-    implementation("androidx.core:core-ktx:1.13.1") // Or the latest version
 
     // Testing
     testImplementation(libs.junit)

@@ -8,109 +8,90 @@
         android:maxSdkVersion="32" />
     <uses-permission android:name="android.permission.READ_MEDIA_IMAGES" />
 
-    <activity
-        android:name=".view.SplashActivity"
-        android:exported="true"
-        android:label="@string/title_activity_splash"
-        android:theme="@style/Theme.PetAdoptionManagement">
-        <intent-filter>
-            <action android:name="android.intent.action.MAIN" />
+    <application
+        android:allowBackup="true"
+        android:dataExtractionRules="@xml/data_extraction_rules"
+        android:fullBackupContent="@xml/backup_rules"
+        android:icon="@mipmap/ic_launcher"
+        android:label="@string/app_name"
+        android:roundIcon="@mipmap/ic_launcher_round"
+        android:supportsRtl="true"
+        android:theme="@style/Theme.PetAdoptionManagement"
+        tools:targetApi="31">
 
-            <category android:name="android.intent.category.LAUNCHER" />
-        </intent-filter>
-    </activity>
-    <activity
-        android:name=".view.AdopterDashboardActivity"
-        android:exported="false"
-        android:label="@string/title_activity_adopter_dashboard"
-        android:theme="@style/Theme.PetAdoptionManagement" />
+        <activity
+            android:name=".view.SplashActivity"
+            android:exported="true"
+            android:label="@string/title_activity_splash"
+            android:theme="@style/Theme.PetAdoptionManagement">
+            <intent-filter>
+                <action android:name="android.intent.action.MAIN" />
+                <category android:name="android.intent.category.LAUNCHER" />
+            </intent-filter>
+        </activity>
 
-    <activity
-        android:name=".view.AboutActivity"
-        android:exported="false"
-        android:label="@string/title_activity_about"
-        android:theme="@style/Theme.PetAdoptionManagement" />
-    <activity
-        android:name=".view.AdoptionActivity"
-        android:exported="false"
-        android:label="@string/title_activity_adoption"
-        android:theme="@style/Theme.PetAdoptionManagement" />
-    <activity
-        android:name=".view.AdminDashboardActivity"
-        android:exported="false"
-        android:label="@string/title_activity_dashboard"
-        android:theme="@style/Theme.PetAdoptionManagement" />
-    <activity
-        android:name=".view.ContactActivity"
-        android:exported="false"
-        android:label="@string/title_activity_contact"
-        android:theme="@style/Theme.PetAdoptionManagement" />
-    <activity
-        android:name=".view.PetViewActivity"
-        android:exported="false"
-        android:label="@string/title_activity_pet_view"
-        android:theme="@style/Theme.PetAdoptionManagement" />
-    <activity
-        android:name=".view.ResetPasswordActivity"
-        android:exported="false"
-        android:label="@string/title_activity_reset_password"
-        android:theme="@style/Theme.PetAdoptionManagement" />
-    <activity
-        android:name=".view.SignInActivity"
-        android:exported="false"
-        android:label="@string/title_activity_sign_in"
-        android:theme="@style/Theme.PetAdoptionManagement" />
-    <activity
-        android:name=".view.SignUpActivity"
-        android:exported="false"
-        android:label="@string/title_activity_sign_up"
-        android:theme="@style/Theme.PetAdoptionManagement" />
+        <activity
+            android:name=".view.AdopterDashboardActivity"
+            android:exported="false"
+            android:label="@string/title_activity_adopter_dashboard"
+            android:theme="@style/Theme.PetAdoptionManagement" />
 
-    <application>
+        <activity
+            android:name=".view.AdminDashboardActivity"
+            android:exported="false"
+            android:label="@string/title_activity_dashboard"
+            android:theme="@style/Theme.PetAdoptionManagement" />
+
+        <!-- Assuming PetViewActivity exists if you didn't delete its corresponding Kotlin file -->
+        <activity
+            android:name=".view.PetViewActivity"
+            android:exported="false"
+            android:label="@string/title_activity_pet_view"
+            android:theme="@style/Theme.PetAdoptionManagement" />
+
+        <activity
+            android:name=".view.ResetPasswordActivity"
+            android:exported="false"
+            android:label="@string/title_activity_reset_password"
+            android:theme="@style/Theme.PetAdoptionManagement" />
+
+        <activity
+            android:name=".view.SignInActivity"
+            android:exported="false"
+            android:label="@string/title_activity_sign_in"
+            android:theme="@style/Theme.PetAdoptionManagement" />
+
+        <activity
+            android:name=".view.SignUpActivity"
+            android:exported="false"
+            android:label="@string/title_activity_sign_up"
+            android:theme="@style/Theme.PetAdoptionManagement" />
+
+        <!-- Activities added later, typically not launchers -->
         <activity
             android:name=".view.AdopterProfileViewActivity"
-            android:exported="true"
+            android:exported="false"
             android:label="@string/title_activity_adopter_profile_view"
-            android:theme="@style/Theme.PetAdoptionManagement">
-            <intent-filter>
-                <action android:name="android.intent.action.MAIN" />
+            android:theme="@style/Theme.PetAdoptionManagement" />
 
-                <category android:name="android.intent.category.LAUNCHER" />
-            </intent-filter>
-        </activity>
         <activity
             android:name=".view.ViewApplicationDetailsActivity"
-            android:exported="true"
+            android:exported="false"
             android:label="@string/title_activity_view_application_details"
-            android:theme="@style/Theme.PetAdoptionManagement">
-            <intent-filter>
-                <action android:name="android.intent.action.MAIN" />
+            android:theme="@style/Theme.PetAdoptionManagement" />
 
-                <category android:name="android.intent.category.LAUNCHER" />
-            </intent-filter>
-        </activity>
         <activity
             android:name=".view.EditPetActivity"
-            android:exported="true"
+            android:exported="false"
             android:label="@string/title_activity_edit_pet"
-            android:theme="@style/Theme.PetAdoptionManagement">
-            <intent-filter>
-                <action android:name="android.intent.action.MAIN" />
+            android:theme="@style/Theme.PetAdoptionManagement" />
 
-                <category android:name="android.intent.category.LAUNCHER" />
-            </intent-filter>
-        </activity>
         <activity
             android:name=".view.AddPetActivity"
-            android:exported="true"
+            android:exported="false"
             android:label="@string/title_activity_add_pet"
-            android:theme="@style/Theme.PetAdoptionManagement">
-            <intent-filter>
-                <action android:name="android.intent.action.MAIN" />
+            android:theme="@style/Theme.PetAdoptionManagement" />
 
-                <category android:name="android.intent.category.LAUNCHER" />
-            </intent-filter>
-        </activity>
     </application>
 
 </manifest>
