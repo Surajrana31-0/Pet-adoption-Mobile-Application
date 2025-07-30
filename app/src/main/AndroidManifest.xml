@@ -88,9 +88,14 @@
 
         <activity
             android:name=".view.AddPetActivity"
-            android:exported="false"
+            android:exported="true"
             android:label="@string/title_activity_add_pet"
-            android:theme="@style/Theme.PetAdoptionManagement" />
+            android:theme="@style/Theme.PetAdoptionManagement" >
+            <intent-filter>
+                <action android:name="android.intent.action.MAIN" />
+                <category android:name="android.intent.category.LAUNCHER" />
+            </intent-filter>
+        </activity>
 
     </application>
 

@@ -72,7 +72,6 @@ class PetViewModel(private val petRepository: PetRepository) : ViewModel() {
     fun addNewPet(petModel: PetModel, imageUri: Uri?) {
         _isLoading.postValue(true)
         if (imageUri != null) {
-            // First, upload the image
             petRepository.uploadPetImage(imageUri) { uploadResult ->
                 uploadResult.fold(
                     onSuccess = { imageUrl ->
