@@ -93,6 +93,7 @@ fun AddPetScreen(petViewModel: PetViewModel) {
         if (!currentMessage.isNullOrBlank()) {
             Toast.makeText(context, currentMessage, Toast.LENGTH_LONG).show()
             if (currentMessage.contains("successfully", ignoreCase = true)) {
+                (context as? Activity)?.finish()
                // Go back to the previous screen (dashboard)
             }
             // Optionally clear message in ViewModel to prevent re-showing

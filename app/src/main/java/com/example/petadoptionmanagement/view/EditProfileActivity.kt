@@ -109,8 +109,13 @@ fun EditProfileScreen(userViewModel: UserViewModel) {
     LaunchedEffect(message) {
         if (!message.isNullOrBlank()) {
             Toast.makeText(context, message, Toast.LENGTH_SHORT).show()
+            if (message == "Profile updated successfully.") {
+                (context as? Activity)?.finish()
+                // Optionally: clear the ViewModel message if needed
+            }
         }
     }
+
 
     val pickImageLauncher = rememberLauncherForActivityResult(
         contract = ActivityResultContracts.GetContent()

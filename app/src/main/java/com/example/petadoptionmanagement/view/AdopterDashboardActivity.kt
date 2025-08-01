@@ -219,10 +219,23 @@ fun PetListContent(
     var showApplyDialog by remember { mutableStateOf(false) }
     var petToApplyFor by remember { mutableStateOf<PetModel?>(null) }
     var applicationMessage by remember { mutableStateOf("") }
+    var selectedPetId by remember { mutableStateOf<String?>(null) }
+    val selectedPet by petViewModel.pet.observeAsState()
+    var showPetDetails by remember { mutableStateOf(false) }
+
+    LaunchedEffect(selectedPetId) {
+        // Fetch the pet details when a new ID is selected
+        selectedPetId?.let { id ->
+            if (id.isNotBlank()) {
+                petViewModel.getPetById(id)
+                showPetDetails = true
+            }
+        }
+    }
 
     // Fetch all pets initially
     LaunchedEffect(Unit) {
-        petViewModel.getPetById("") // Calling getPetById with empty string for getAllPets (check PetViewModel logic for this)
+        petViewModel.fetchAllPets() // Calling getPetById with empty string for getAllPets (check PetViewModel logic for this)
     }
 
     val filteredPets = remember(allPets, selectedStatusFilter) {
@@ -344,21 +357,26 @@ fun PetListContent(
             ) {
                 items(filteredPets, key = { it.petId }) { pet ->
                     PetCardForAdopter(pet = pet, onApplyClick = {
-                        petToApplyFor = it
+                        petToApplyFor = pet
                         showApplyDialog = true
+                    }, onCardClick = {petId ->
+                        selectedPetId = petId
                     })
                 }
+            }
+            if (showPetDetails && selectedPet != null) {
+                PetDetailsDialog(pet = selectedPet!!, onDismiss = { showPetDetails = false })
             }
         }
     }
 }
 
 @Composable
-fun PetCardForAdopter(pet: PetModel, onApplyClick: (PetModel) -> Unit) {
+fun PetCardForAdopter(pet: PetModel, onApplyClick: (PetModel) -> Unit, onCardClick: (String) -> Unit) {
     Card(
         modifier = Modifier
             .fillMaxWidth()
-            .clickable { /* Maybe navigate to PetDetailActivity if you create one */ },
+            .clickable { onCardClick(pet.petId) },
         shape = RoundedCornerShape(12.dp),
         elevation = CardDefaults.cardElevation(defaultElevation = 4.dp)
     ) {
@@ -445,6 +463,33 @@ fun MyApplicationsContent(
             }
         }
     }
+}
+
+@Composable
+fun PetDetailsDialog(pet: PetModel, onDismiss: () -> Unit) {
+    AlertDialog(
+        onDismissRequest = onDismiss,
+        title = { Text(pet.petName) },
+        text = {
+            Column {
+                Text("Breed: ${pet.petBreed}")
+                Text("Age: ${pet.petAge}")
+                Text("Status: ${pet.petStatus.name}")
+                // Add more pet details as needed
+                AsyncImage(
+                    model = pet.petImageUrl,
+                    contentDescription = "Image of ${pet.petName}",
+                    modifier = Modifier.fillMaxWidth().height(200.dp)
+                )
+                Text(pet.petDescription)
+            }
+        },
+        confirmButton = {
+            Button(onClick = onDismiss) {
+                Text("Close")
+            }
+        }
+    )
 }
 
 @Composable

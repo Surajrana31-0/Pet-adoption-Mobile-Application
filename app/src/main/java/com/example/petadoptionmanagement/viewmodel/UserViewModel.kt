@@ -32,6 +32,9 @@ class UserViewModel(private val userRepository: UserRepository) : ViewModel() {
     private val _userList = MutableLiveData<List<UserModel>>()
     val userList: LiveData<List<UserModel>> get() = _userList
 
+    private val _signUpSuccess = MutableLiveData<Boolean>()
+    val signUpSuccess: LiveData<Boolean> get() = _signUpSuccess
+
     private var authStateListener: FirebaseAuth.AuthStateListener? = null
 
     init {
@@ -60,8 +63,14 @@ class UserViewModel(private val userRepository: UserRepository) : ViewModel() {
         _isLoading.postValue(true)
         userRepository.createUser(userModel, password) { result ->
             result.fold(
-                onSuccess = { _message.postValue("Sign up successful! Please check your email to verify.") },
-                onFailure = { e -> _message.postValue("Sign up failed: ${e.message}") }
+                onSuccess = {
+                    _message.postValue("Sign up successful! Please check your email to verify.")
+                    _signUpSuccess.postValue(true)
+                },
+                onFailure = { e ->
+                    _message.postValue("Sign up failed: ${e.message}")
+                    _signUpSuccess.postValue(false)
+                }
             )
             _isLoading.postValue(false)
         }
@@ -188,4 +197,9 @@ class UserViewModel(private val userRepository: UserRepository) : ViewModel() {
     fun clearMessage() {
         _message.value = "" // This is allowed because it's inside the ViewModel
     }
+
+    fun clearSignUpEvent() {
+        _signUpSuccess.value = null // Or false, depending on how you want to reset the event
+    }
+
 }

@@ -91,23 +91,18 @@ fun SignUpScreen(userViewModel: UserViewModel) {
     val isLoading by userViewModel.isLoading.observeAsState(false)
     val message by userViewModel.message.observeAsState()
 
-    // This effect handles showing feedback messages and navigating on success.
-    LaunchedEffect(message) {
-        val currentMessage = message
-        if (!currentMessage.isNullOrBlank()) {
-            Toast.makeText(context, currentMessage, Toast.LENGTH_LONG).show()
-            // If the message indicates success, navigate to the sign-in screen.
-            if (currentMessage.contains("Sign up successful", ignoreCase = true)) {
-                val intent = Intent(context, SignInActivity::class.java).apply {
-                    flags = Intent.FLAG_ACTIVITY_NEW_TASK or Intent.FLAG_ACTIVITY_CLEAR_TASK
-                }
-                context.startActivity(intent)
-                (context as? Activity)?.finish()
+    val signUpSuccess by userViewModel.signUpSuccess.observeAsState()
+    LaunchedEffect(signUpSuccess) {
+        if (signUpSuccess == true) {
+            val intent = Intent(context, SignInActivity::class.java).apply {
+                flags = Intent.FLAG_ACTIVITY_NEW_TASK or Intent.FLAG_ACTIVITY_CLEAR_TASK
             }
-            // Optionally clear the message to prevent it from showing again on config change.
-            // userViewModel.clearMessage()
+            context.startActivity(intent)
+            (context as? Activity)?.finish()
+            userViewModel.clearSignUpEvent()
         }
     }
+
 
     // --- UI Composition ---
     val backgroundBrush = Brush.verticalGradient(

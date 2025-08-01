@@ -64,6 +64,17 @@ class AdoptionApplicationRepositoryImpl @Inject constructor(
         applicationsCollection.document(applicationId).update("status", newStatus)
             .addOnSuccessListener { onResult(Result.success(Unit)) }
             .addOnFailureListener { e -> onResult(Result.failure(e)) }
+        if (newStatus == ApplicationStatus.APPROVED) {
+            // Fetch the application to get petId
+            applicationsCollection.document(applicationId).get().addOnSuccessListener { doc ->
+                val app = doc.toObject(AdoptionApplicationModel::class.java)
+                val petId = app?.petId
+                if (!petId.isNullOrBlank()) {
+                    petsCollection.document(petId).update("petStatus", PetStatus.ADOPTED)
+                }
+            }
+        }
+
     }
 
     override fun applyForPet(application: AdoptionApplicationModel, petId: String, onResult: (Result<Unit>) -> Unit) {
@@ -89,4 +100,6 @@ class AdoptionApplicationRepositoryImpl @Inject constructor(
             onResult(Result.failure(e))
         }
     }
+
+
 }

@@ -103,6 +103,21 @@ fun AdminDashboardScreen(
     val allPets by petViewModel.allPets.observeAsState(emptyList())
     val allApplications by adoptionViewModel.allApplications.observeAsState(emptyList())
 
+    var selectedPetId by remember { mutableStateOf<String?>(null) }
+    val selectedPet by petViewModel.pet.observeAsState()
+    var showPetDetails by remember { mutableStateOf(false) }
+
+    LaunchedEffect(selectedPetId) {
+        // Fetch the pet details when a new ID is selected
+        selectedPetId?.let { id ->
+            if (id.isNotBlank()) {
+                petViewModel.getPetById(id)
+                showPetDetails = true
+            }
+        }
+    }
+
+
     // Fetch data when the screen is first composed
     LaunchedEffect(Unit) {
         adoptionViewModel.getAllApplications() // Fetches all applications for the "Applications" tab
@@ -141,9 +156,12 @@ fun AdminDashboardScreen(
             TopAppBar(
                 title = { Text("Admin Dashboard") },
                 actions = {
-                    IconButton(onClick = { /* Navigate to a dedicated EditProfileActivity */ }) {
+                    IconButton(onClick = {
+                        context.startActivity(Intent(context, EditProfileActivity::class.java))
+                    }) {
                         Icon(Icons.Default.Settings, contentDescription = "Edit Profile")
                     }
+
                     IconButton(onClick = { userViewModel.logout()
                         context.startActivity(Intent(context, SignInActivity::class.java).apply {
                             flags = Intent.FLAG_ACTIVITY_NEW_TASK or Intent.FLAG_ACTIVITY_CLEAR_TASK
@@ -156,12 +174,15 @@ fun AdminDashboardScreen(
             )
         },
         floatingActionButton = {
-            if (selectedTabIndex == 1) { // Show FAB only on the "Manage Pets" tab
-                FloatingActionButton(onClick = { /* Navigate to AddPetActivity */ }) {
+            if (selectedTabIndex == 1) {
+                FloatingActionButton(onClick = {
+                    context.startActivity(Intent(context, AddPetActivity::class.java))
+                }) {
                     Icon(Icons.Default.Add, contentDescription = "Add Pet")
                 }
             }
         }
+
     ) { innerPadding ->
         Column(modifier = Modifier.padding(innerPadding)) {
             TabRow(selectedTabIndex = selectedTabIndex) {
@@ -177,11 +198,18 @@ fun AdminDashboardScreen(
                 0 -> DashboardContent(allPets)
                 1 -> PetManagementContent(
                     pets = allPets,
-                    onEdit = { /* Navigate to EditPetActivity with petId */ },
+                    onEdit = { petIdToEdit ->
+                        context.startActivity(Intent(context, EditPetActivity::class.java).apply{
+                        putExtra("petId", petIdToEdit)
+                    })
+                    },
                     onDelete = { pet ->
                         petToDelete = pet
                         showDeleteDialog = true
-                    }
+
+                    },
+                    onPetClick = { petId ->
+                        selectedPetId = petId}
                 )
                 2 -> ApplicationManagementContent(
                     applications = allApplications.filter { it.status == ApplicationStatus.PENDING },
@@ -195,6 +223,7 @@ fun AdminDashboardScreen(
 
 @Composable
 fun DashboardContent(pets: List<PetModel>) {
+
     // This composable holds the statistics cards from your original design
     Column(
         modifier = Modifier.fillMaxSize().padding(16.dp),
@@ -219,7 +248,8 @@ fun DashboardContent(pets: List<PetModel>) {
 fun PetManagementContent(
     pets: List<PetModel>,
     onEdit: (String) -> Unit,
-    onDelete: (PetModel) -> Unit
+    onDelete: (PetModel) -> Unit,
+    onPetClick: (String) -> Unit
 ) {
     if (pets.isEmpty()) {
         Box(modifier = Modifier.fillMaxSize(), contentAlignment = Alignment.Center) {
@@ -229,15 +259,17 @@ fun PetManagementContent(
     }
     LazyColumn(contentPadding = PaddingValues(16.dp)) {
         items(pets) { pet ->
-            PetListItem(pet = pet, onEdit = onEdit, onDelete = onDelete)
+            PetListItem(pet = pet, onEdit = onEdit, onDelete = onDelete, onPetClick)
             Spacer(modifier = Modifier.height(8.dp))
         }
     }
 }
 
 @Composable
-fun PetListItem(pet: PetModel, onEdit: (String) -> Unit, onDelete: (PetModel) -> Unit) {
-    Card(elevation = CardDefaults.cardElevation(4.dp), modifier = Modifier.fillMaxWidth()) {
+fun PetListItem(pet: PetModel, onEdit: (String) -> Unit, onDelete: (PetModel) -> Unit, onPetClick: (String) -> Unit) {
+    Card(elevation = CardDefaults.cardElevation(4.dp), modifier = Modifier
+        .fillMaxWidth()
+        .clickable {onPetClick(pet.petId)}) {
         Row(modifier = Modifier.padding(8.dp), verticalAlignment = Alignment.CenterVertically) {
             AsyncImage(
                 model = pet.petImageUrl,

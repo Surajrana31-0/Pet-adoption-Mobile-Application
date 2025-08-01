@@ -37,7 +37,7 @@ class PetViewModel(private val petRepository: PetRepository) : ViewModel() {
         fetchAllPets()
     }
 
-    private fun fetchAllPets() {
+     fun fetchAllPets() {
         _isLoading.postValue(true)
         // Remove any existing listener before attaching a new one
         allPetsListener?.remove()
@@ -54,8 +54,13 @@ class PetViewModel(private val petRepository: PetRepository) : ViewModel() {
     }
 
     fun getPetById(petId: String) {
+        if (petId.isBlank()) {
+            _pet.postValue(null)
+            _message.postValue("Cannot fetch pet details: Pet ID is blank.")
+            _isLoading.postValue(false)
+            return
+        }
         _isLoading.postValue(true)
-        // Detach any previous single pet listener
         singlePetListener?.remove()
         singlePetListener = petRepository.getPetById(petId) { result ->
             result.fold(
@@ -68,6 +73,7 @@ class PetViewModel(private val petRepository: PetRepository) : ViewModel() {
             _isLoading.postValue(false)
         }
     }
+
 
     fun addNewPet(petModel: PetModel, imageUri: Uri?) {
         _isLoading.postValue(true)

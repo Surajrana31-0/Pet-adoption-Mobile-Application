@@ -20,4 +20,6 @@
     <string name="title_activity_edit_pet">EditPetActivity</string>
     <string name="title_activity_view_application_details">ViewApplicationDetailsActivity</string>
     <string name="title_activity_adopter_profile_view">AdopterProfileViewActivity</string>
+    <string name="title_activity_edit_profile">Edit Profile</string>
+
 </resources>
