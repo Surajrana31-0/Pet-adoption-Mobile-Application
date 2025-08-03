@@ -28,6 +28,7 @@ import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.layout.ContentScale
 import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.res.painterResource
+import androidx.compose.ui.text.TextStyle
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.input.PasswordVisualTransformation
 import androidx.compose.ui.text.input.VisualTransformation
@@ -210,6 +211,7 @@ fun SignInScreen(userViewModel: UserViewModel) {
                     onValueChange = { email = it },
                     label = { Text("Email", color = Color.Gray) },
                     singleLine = true,
+                    textStyle = TextStyle(color = Color.Black),
                     colors = TextFieldDefaults.colors(
                         focusedContainerColor = textFieldBackgroundColor,
                         unfocusedContainerColor = textFieldBackgroundColor,
@@ -217,7 +219,10 @@ fun SignInScreen(userViewModel: UserViewModel) {
                         focusedIndicatorColor = Color.Transparent,
                         unfocusedIndicatorColor = Color.Transparent,
                         disabledIndicatorColor = Color.Transparent,
-                        cursorColor = Color.Black
+                        cursorColor = Color.Black,
+                        focusedTextColor = Color.Black,
+                        unfocusedTextColor = Color.Black,
+                        disabledTextColor = Color.Black,
                     ),
                     shape = RoundedCornerShape(12.dp),
                     modifier = Modifier.fillMaxWidth()
@@ -229,6 +234,7 @@ fun SignInScreen(userViewModel: UserViewModel) {
                     onValueChange = { password = it },
                     label = { Text("Password", color = Color.Gray) },
                     singleLine = true,
+                    textStyle = TextStyle(color = Color.Black),
                     visualTransformation = if (passwordVisible) VisualTransformation.None else PasswordVisualTransformation(),
                     colors = TextFieldDefaults.colors(
                         focusedContainerColor = textFieldBackgroundColor,
@@ -237,8 +243,13 @@ fun SignInScreen(userViewModel: UserViewModel) {
                         focusedIndicatorColor = Color.Transparent,
                         unfocusedIndicatorColor = Color.Transparent,
                         disabledIndicatorColor = Color.Transparent,
-                        cursorColor = Color.Black
+                        cursorColor = Color.Black,
+                        focusedTextColor = Color.Black,
+                        unfocusedTextColor = Color.Black,
+                        disabledTextColor = Color.Black,
                     ),
+
+
                     shape = RoundedCornerShape(12.dp),
                     modifier = Modifier.fillMaxWidth(),
                     trailingIcon = {

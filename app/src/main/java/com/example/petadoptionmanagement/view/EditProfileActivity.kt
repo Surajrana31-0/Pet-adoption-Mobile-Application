@@ -190,21 +190,24 @@ fun EditProfileScreen(userViewModel: UserViewModel) {
                     onValueChange = { username = it },
                     label = { Text("Username") },
                     modifier = Modifier.fillMaxWidth(),
-                    shape = RoundedCornerShape(12.dp)
+                    shape = RoundedCornerShape(12.dp),
+                    textStyle = LocalTextStyle.current.copy(color = Color.Black)
                 )
                 TextField(
                     value = firstName,
                     onValueChange = { firstName = it },
                     label = { Text("First Name") },
                     modifier = Modifier.fillMaxWidth(),
-                    shape = RoundedCornerShape(12.dp)
+                    shape = RoundedCornerShape(12.dp),
+                    textStyle = LocalTextStyle.current.copy(color = Color.Black)
                 )
                 TextField(
                     value = lastName,
                     onValueChange = { lastName = it },
                     label = { Text("Last Name") },
                     modifier = Modifier.fillMaxWidth(),
-                    shape = RoundedCornerShape(12.dp)
+                    shape = RoundedCornerShape(12.dp),
+                    textStyle = LocalTextStyle.current.copy(color = Color.Black)
                 )
                 TextField(
                     value = email,
@@ -213,6 +216,7 @@ fun EditProfileScreen(userViewModel: UserViewModel) {
                     keyboardOptions = KeyboardOptions(keyboardType = KeyboardType.Email),
                     modifier = Modifier.fillMaxWidth(),
                     shape = RoundedCornerShape(12.dp),
+                    textStyle = LocalTextStyle.current.copy(color = Color.Black),
                     enabled = false // Email usually cannot be changed directly from here
                 )
                 TextField(
@@ -221,7 +225,8 @@ fun EditProfileScreen(userViewModel: UserViewModel) {
                     label = { Text("Contact Number") },
                     keyboardOptions = KeyboardOptions(keyboardType = KeyboardType.Phone),
                     modifier = Modifier.fillMaxWidth(),
-                    shape = RoundedCornerShape(12.dp)
+                    shape = RoundedCornerShape(12.dp),
+                    textStyle = LocalTextStyle.current.copy(color = Color.Black)
                 )
 
                 Spacer(modifier = Modifier.height(24.dp))

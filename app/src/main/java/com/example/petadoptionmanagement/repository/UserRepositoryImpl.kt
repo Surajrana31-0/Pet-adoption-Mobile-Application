@@ -4,6 +4,7 @@ package com.example.petadoptionmanagement.repository
 
 import android.content.Context
 import android.net.Uri
+import android.util.Log
 import com.cloudinary.Cloudinary
 import com.cloudinary.utils.ObjectUtils
 import com.example.petadoptionmanagement.model.UserModel
@@ -70,9 +71,15 @@ class UserRepositoryImpl @Inject constructor(
 
     override fun forgetPassword(email: String, onResult: (Result<Unit>) -> Unit) {
         firebaseAuth.sendPasswordResetEmail(email)
-            .addOnSuccessListener { onResult(Result.success(Unit)) }
-            .addOnFailureListener { e -> onResult(Result.failure(e)) }
+            .addOnSuccessListener {
+                onResult(Result.success(Unit))
+            }
+            .addOnFailureListener { e ->
+                onResult(Result.failure(e))
+                Log.e("ResetPassword", "Failed to send email: ${e.message}") // <-- Add this
+            }
     }
+
 
     override fun getCurrentFirebaseUser(): FirebaseUser? = firebaseAuth.currentUser
 

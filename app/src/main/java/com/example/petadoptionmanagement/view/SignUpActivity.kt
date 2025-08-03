@@ -19,6 +19,7 @@ import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.filled.Visibility
 import androidx.compose.material.icons.filled.VisibilityOff
 import androidx.compose.material3.*
+import androidx.compose.ui.text.TextStyle
 import androidx.compose.runtime.*
 import androidx.compose.runtime.livedata.observeAsState
 import androidx.compose.ui.Alignment
@@ -94,6 +95,7 @@ fun SignUpScreen(userViewModel: UserViewModel) {
     val signUpSuccess by userViewModel.signUpSuccess.observeAsState()
     LaunchedEffect(signUpSuccess) {
         if (signUpSuccess == true) {
+            userViewModel.logout()
             val intent = Intent(context, SignInActivity::class.java).apply {
                 flags = Intent.FLAG_ACTIVITY_NEW_TASK or Intent.FLAG_ACTIVITY_CLEAR_TASK
             }
@@ -135,40 +137,50 @@ fun SignUpScreen(userViewModel: UserViewModel) {
                     onValueChange = { username = it },
                     label = { Text("Username") },
                     modifier = Modifier.fillMaxWidth(),
-                    shape = RoundedCornerShape(12.dp)
-                )
+                    shape = RoundedCornerShape(12.dp),
+                    textStyle = TextStyle(color = Color.Black),
+
+                    )
                 Spacer(modifier = Modifier.height(16.dp))
                 OutlinedTextField(
                     value = firstName,
                     onValueChange = { firstName = it },
                     label = { Text("First Name") },
                     modifier = Modifier.fillMaxWidth(),
-                    shape = RoundedCornerShape(12.dp)
-                )
+                    shape = RoundedCornerShape(12.dp),
+                    textStyle = TextStyle(color = Color.Black),
+
+                    )
                 Spacer(modifier = Modifier.height(16.dp))
                 OutlinedTextField(
                     value = lastName,
                     onValueChange = { lastName = it },
                     label = { Text("Last Name") },
                     modifier = Modifier.fillMaxWidth(),
-                    shape = RoundedCornerShape(12.dp)
-                )
+                    shape = RoundedCornerShape(12.dp),
+                    textStyle = TextStyle(color = Color.Black),
+
+                    )
                 Spacer(modifier = Modifier.height(16.dp))
                 OutlinedTextField(
                     value = email,
                     onValueChange = { email = it },
                     label = { Text("Email") },
                     modifier = Modifier.fillMaxWidth(),
-                    shape = RoundedCornerShape(12.dp)
-                )
+                    shape = RoundedCornerShape(12.dp),
+                    textStyle = TextStyle(color = Color.Black),
+
+                    )
                 Spacer(modifier = Modifier.height(16.dp))
                 OutlinedTextField(
                     value = contact,
                     onValueChange = { contact = it },
                     label = { Text("Contact") },
                     modifier = Modifier.fillMaxWidth(),
-                    shape = RoundedCornerShape(12.dp)
-                )
+                    shape = RoundedCornerShape(12.dp),
+                    textStyle = TextStyle(color = Color.Black),
+
+                    )
                 Spacer(modifier = Modifier.height(16.dp))
                 OutlinedTextField(
                     value = password,
@@ -182,8 +194,10 @@ fun SignUpScreen(userViewModel: UserViewModel) {
                         }
                     },
                     modifier = Modifier.fillMaxWidth(),
-                    shape = RoundedCornerShape(12.dp)
-                )
+                    shape = RoundedCornerShape(12.dp),
+                    textStyle = TextStyle(color = Color.Black),
+
+                    )
                 Spacer(modifier = Modifier.height(16.dp))
                 OutlinedTextField(
                     value = confirmPassword,
@@ -197,8 +211,10 @@ fun SignUpScreen(userViewModel: UserViewModel) {
                         }
                     },
                     modifier = Modifier.fillMaxWidth(),
-                    shape = RoundedCornerShape(12.dp)
-                )
+                    shape = RoundedCornerShape(12.dp),
+                    textStyle = TextStyle(color = Color.Black),
+
+                    )
                 Spacer(modifier = Modifier.height(16.dp))
                 Row(
                     modifier = Modifier.fillMaxWidth(),
